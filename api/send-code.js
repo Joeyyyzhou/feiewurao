@@ -12,8 +12,8 @@ function generateCode() {
 
 const transporter = nodemailer.createTransport({
   host: 'smtpdm.aliyun.com',
-  port: 465,
-  secure: true,
+  port: 80,
+  secure: false,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
