@@ -54,7 +54,7 @@ function App() {
       )}
 
       <AnimatePresence mode="wait">
-        <motion.div key={state.phase} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+        <motion.div key={state.phase === 'verify-sent' ? 'verify' : state.phase} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
           {state.phase === 'landing' && (
             <LandingPage
               onYes={() => setPhase('onboarding')}
