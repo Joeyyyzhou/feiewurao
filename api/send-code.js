@@ -13,16 +13,26 @@ function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Aliyun DirectMail API signature
+function percentEncode(str) {
+  return encodeURIComponent(str)
+    .replace(/\+/g, '%20')
+    .replace(/\*/g, '%2A')
+    .replace(/~/g, '%7E');
+}
+
 function signRequest(params) {
-  const sorted = Object.keys(params).sort().map(k => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`).join('&');
-  const stringToSign = `POST&${encodeURIComponent('/')}&${encodeURIComponent(sorted)}`;
+  const sorted = Object.keys(params).sort()
+    .map(k => `${percentEncode(k)}=${percentEncode(params[k])}`)
+    .join('&');
+  const stringToSign = `POST&${percentEncode('/')}&${percentEncode(sorted)}`;
   const hmac = crypto.createHmac('sha1', AK_SECRET + '&');
   hmac.update(stringToSign);
   return hmac.digest('base64');
 }
 
-async function sendAliyunEmail(to, subject, htmlBody) {
+async function sendEmail(to, subject, code) {
+  const html = `<div style="max-width:400px;margin:0 auto;padding:30px;font-family:sans-serif;text-align:center"><div style="font-size:40px;margin-bottom:20px">🐧💡</div><h2 style="color:#1C1440;margin-bottom:4px">非鹅勿扰</h2><p style="color:#6E6494;font-size:13px;margin-bottom:24px">不看脸，只听心</p><div style="background:#EDE7F6;border-radius:12px;padding:24px;margin-bottom:20px"><p style="color:#6E6494;font-size:13px;margin-bottom:8px">你的验证码是</p><div style="font-size:32px;font-weight:800;letter-spacing:6px;color:#1C1440;font-family:monospace">${code}</div><p style="color:#A99DBF;font-size:11px;margin-top:8px">10 分钟内有效</p></div><p style="color:#A99DBF;font-size:11px">如果你没有请求此验证码，请忽略这封邮件</p></div>`;
+
   const params = {
     Action: 'SingleSendMail',
     AccountName: 'noreply@feiewurao.cn',
@@ -30,7 +40,7 @@ async function sendAliyunEmail(to, subject, htmlBody) {
     ReplyToAddress: 'false',
     ToAddress: to,
     Subject: subject,
-    HtmlBody: htmlBody,
+    HtmlBody: html,
     Format: 'JSON',
     Version: '2015-11-23',
     AccessKeyId: AK_ID,
@@ -44,7 +54,9 @@ async function sendAliyunEmail(to, subject, htmlBody) {
 
   params.Signature = signRequest(params);
 
-  const body = Object.keys(params).map(k => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`).join('&');
+  const body = Object.keys(params)
+    .map(k => `${percentEncode(k)}=${percentEncode(params[k])}`)
+    .join('&');
 
   const res = await fetch('https://dm.aliyuncs.com/', {
     method: 'POST',
@@ -53,9 +65,8 @@ async function sendAliyunEmail(to, subject, htmlBody) {
   });
 
   const data = await res.json();
-  if (!res.ok || data.Code) {
-    console.error('Aliyun DM error:', JSON.stringify(data));
-    throw new Error(data.Message || 'Email send failed');
+  if (data.Code) {
+    throw new Error(data.Message || data.Code);
   }
   return data;
 }
@@ -75,49 +86,19 @@ export default async function handler(req, res) {
   const code = generateCode();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  // Save code to DB
   await supabase.from('verification_codes').delete().eq('email', email);
   const { error: dbError } = await supabase.from('verification_codes').insert({
-    email,
-    code,
-    expires_at: expiresAt,
+    email, code, expires_at: expiresAt,
   });
 
   if (dbError) {
-    console.error('DB error:', dbError);
-    return res.status(500).json({ error: '服务器错误，请稍后重试' });
+    return res.status(500).json({ error: '服务器错误' });
   }
 
-  // Send email via Aliyun DirectMail
   try {
-    const htmlBody = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
-        <div style="text-align: center; margin-bottom: 32px;">
-          <span style="font-size: 48px;">🐧💡</span>
-        </div>
-        <h1 style="color: #1C1440; font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 8px;">
-          非鹅勿扰
-        </h1>
-        <p style="color: #6E6494; font-size: 14px; text-align: center; margin-bottom: 32px;">
-          不看脸，只听心
-        </p>
-        <div style="background: linear-gradient(135deg, #EDE7F6, #D0C8E4); border-radius: 16px; padding: 32px; text-align: center; margin-bottom: 24px;">
-          <p style="color: #6E6494; font-size: 14px; margin-bottom: 12px;">你的验证码是</p>
-          <div style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #1C1440; font-family: monospace;">
-            ${code}
-          </div>
-          <p style="color: #A99DBF; font-size: 12px; margin-top: 12px;">10 分钟内有效</p>
-        </div>
-        <p style="color: #A99DBF; font-size: 12px; text-align: center;">
-          如果你没有请求此验证码，请忽略这封邮件。
-        </p>
-      </div>
-    `;
-
-    await sendAliyunEmail(email, `你的非鹅勿扰验证码：${code}`, htmlBody);
+    await sendEmail(email, `验证码 ${code} - 非鹅勿扰`, code);
     return res.status(200).json({ success: true });
   } catch (err) {
-    console.error('Send error:', err);
     return res.status(500).json({ error: String(err.message || err) });
   }
 }
