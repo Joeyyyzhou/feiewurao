@@ -274,3 +274,149 @@ export async function getAdminStats() {
     ).sort((a, b) => (b[1] as number) - (a[1] as number)),
   };
 }
+
+// ============ Real Guest Matching ============
+export async function fetchRealGuests(userId: string, prefGender: string, prefCities: string[], questionIds: number[]) {
+  if (isOnline() && supabase) {
+    let query = supabase.from('users').select('*').neq('id', userId).eq('gender', prefGender);
+    if (prefCities.length > 0) {
+      query = query.in('base_city', prefCities);
+    }
+    const { data: candidates } = await query.limit(20);
+    if (!candidates || candidates.length === 0) return [];
+
+    const candidateIds = candidates.map((c: { id: string }) => c.id);
+    const { data: answers } = await supabase
+      .from('answers')
+      .select('*')
+      .in('user_id', candidateIds)
+      .in('question_id', questionIds);
+
+    // Shuffle and pick up to 5
+    const shuffled = candidates.sort(() => Math.random() - 0.5).slice(0, 5);
+    return shuffled.map((c: { id: string; nickname: string; avatar_color: string }) => ({
+      id: c.id,
+      nickname: c.nickname,
+      avatarColor: c.avatar_color,
+      answers: (answers || [])
+        .filter((a: { user_id: string }) => a.user_id === c.id)
+        .map((a: { question_id: number; content: string }) => ({ questionId: a.question_id, content: a.content })),
+      lightStatus: 'on' as const,
+    }));
+  }
+  return [];
+}
+
+// ============ Real Light Notifications ============
+export async function fetchMyNotifications(userId: string) {
+  if (isOnline() && supabase) {
+    const { data } = await supabase
+      .from('light_notifications')
+      .select('*')
+      .eq('to_user_id', userId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (!data || data.length === 0) return [];
+
+    // Get from_user details
+    const fromIds = data.map((n: { from_user_id: string }) => n.from_user_id);
+    const { data: users } = await supabase.from('users').select('id, nickname, avatar_color').in('id', fromIds);
+    const { data: answers } = await supabase.from('answers').select('*').in('user_id', fromIds);
+
+    return data.map((n: { id: string; from_user_id: string; status: string; created_at: string; expires_at: string }) => {
+      const u = (users || []).find((x: { id: string }) => x.id === n.from_user_id);
+      return {
+        id: n.id,
+        fromUser: {
+          nickname: u?.nickname || '匿名',
+          avatarColor: u?.avatar_color || '#7C6DD8',
+          answers: (answers || [])
+            .filter((a: { user_id: string }) => a.user_id === n.from_user_id)
+            .slice(0, 4)
+            .map((a: { question_id: number; content: string }) => ({ questionId: a.question_id, content: a.content })),
+        },
+        status: n.status,
+        createdAt: n.created_at,
+        expiresAt: n.expires_at,
+      };
+    });
+  }
+  return [];
+}
+
+// ============ Real Matches ============
+export async function fetchMyMatches(userId: string) {
+  if (isOnline() && supabase) {
+    const { data } = await supabase
+      .from('matches')
+      .select('*')
+      .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
+      .order('matched_at', { ascending: false });
+
+    if (!data || data.length === 0) return [];
+
+    const otherIds = data.map((m: { user1_id: string; user2_id: string }) =>
+      m.user1_id === userId ? m.user2_id : m.user1_id
+    );
+    const { data: users } = await supabase.from('users').select('id, nickname, avatar_color, wechat_id').in('id', otherIds);
+
+    return data.map((m: { id: string; user1_id: string; user2_id: string; matched_at: string }) => {
+      const otherId = m.user1_id === userId ? m.user2_id : m.user1_id;
+      const u = (users || []).find((x: { id: string }) => x.id === otherId);
+      return {
+        id: m.id,
+        user: { nickname: u?.nickname || '匿名', avatarColor: u?.avatar_color || '#7C6DD8' },
+        wechatId: u?.wechat_id || '',
+        matchedAt: m.matched_at,
+      };
+    });
+  }
+  return [];
+}
+
+// ============ Finalize Light (send notification + check mutual) ============
+export async function finalizeLightAction(fromUserId: string, toUserId: string): Promise<{ matched: boolean; wechatId?: string }> {
+  if (isOnline() && supabase) {
+    // Send light notification
+    await supabase.from('light_notifications').insert({ from_user_id: fromUserId, to_user_id: toUserId });
+
+    // Check if the other person already lit for me (mutual match)
+    const { data: mutual } = await supabase
+      .from('light_notifications')
+      .select('id')
+      .eq('from_user_id', toUserId)
+      .eq('to_user_id', fromUserId)
+      .eq('status', 'pending')
+      .limit(1);
+
+    if (mutual && mutual.length > 0) {
+      // Mutual match! Create match record
+      await supabase.from('matches').insert({ user1_id: fromUserId, user2_id: toUserId });
+      // Update both notifications to matched
+      await supabase.from('light_notifications').update({ status: 'matched' }).eq('from_user_id', toUserId).eq('to_user_id', fromUserId);
+      await supabase.from('light_notifications').update({ status: 'matched' }).eq('from_user_id', fromUserId).eq('to_user_id', toUserId);
+      // Get matched user's wechat
+      const { data: matchedUser } = await supabase.from('users').select('wechat_id').eq('id', toUserId).single();
+      return { matched: true, wechatId: matchedUser?.wechat_id || '' };
+    }
+    return { matched: false };
+  }
+  return { matched: false };
+}
+
+// ============ Respond to Light ============
+export async function respondToLightNotification(notificationId: string, fromUserId: string, toUserId: string, accept: boolean): Promise<{ matched: boolean; wechatId?: string }> {
+  if (isOnline() && supabase) {
+    if (accept) {
+      await supabase.from('light_notifications').update({ status: 'matched' }).eq('id', notificationId);
+      await supabase.from('matches').insert({ user1_id: fromUserId, user2_id: toUserId });
+      const { data: matchedUser } = await supabase.from('users').select('wechat_id').eq('id', fromUserId).single();
+      return { matched: true, wechatId: matchedUser?.wechat_id || '' };
+    } else {
+      await supabase.from('light_notifications').update({ status: 'ignored' }).eq('id', notificationId);
+      return { matched: false };
+    }
+  }
+  return { matched: false };
+}

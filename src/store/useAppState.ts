@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { UserProfile, Answer, GuestCard, LightRecord, MatchRecord, AppPhase } from './mockData';
-import { generateMockGuests, generateMockLightNotifications, generateMockMatches, getTodayQuestions } from './mockData';
-import { registerUser as apiRegisterUser, submitAnswer as apiSubmitAnswer, recordLightAction, sendVerificationCode, verifyOtpCode } from '../lib/api';
+import { getTodayQuestions } from './mockData';
+import { registerUser as apiRegisterUser, submitAnswer as apiSubmitAnswer, recordLightAction, sendVerificationCode, verifyOtpCode, fetchRealGuests, fetchMyNotifications, fetchMyMatches, finalizeLightAction, respondToLightNotification } from '../lib/api';
 import type { Question } from '../data/questions';
 
 // ===== Session persistence =====
@@ -185,13 +185,18 @@ export function useAppState() {
     });
   }, []);
 
-  const finishAnswering = useCallback(() => {
-    setState(prev => {
-      const questionIds = prev.todayQuestions.map(q => q.id);
-      const guests = generateMockGuests(questionIds, 5);
-      return { ...prev, guests, phase: 'daily-guests' };
-    });
-  }, []);
+  const finishAnswering = useCallback(async () => {
+    const prev = state;
+    if (!prev.user) return;
+    const questionIds = prev.todayQuestions.map(q => q.id);
+    const guests = await fetchRealGuests(
+      prev.user.id,
+      prev.user.prefGender,
+      prev.user.prefBaseCities,
+      questionIds
+    ) as GuestCard[];
+    setState(p => ({ ...p, guests, phase: 'daily-guests' }));
+  }, [state]);
 
   const updateGuestLight = useCallback((guestId: string, status: 'on' | 'off') => {
     setState(prev => {
@@ -200,58 +205,86 @@ export function useAppState() {
     });
   }, []);
 
-  const finalizeLight = useCallback((guestId: string) => {
-    setState(prev => {
-      const guest = prev.guests.find(g => g.id === guestId);
-      return { ...prev, lastMatchedGuest: guest || null, phase: 'match-success' };
-    });
-  }, []);
+  const finalizeLight = useCallback(async (guestId: string) => {
+    const guest = state.guests.find(g => g.id === guestId);
+    if (!state.user || !guest) return;
+    // Send light notification and check mutual match
+    const result = await finalizeLightAction(state.user.id, guestId);
+    if (result.matched) {
+      // Mutual match! Show match success with real wechat
+      setState(prev => ({
+        ...prev,
+        lastMatchedGuest: { ...guest, wechatId: result.wechatId } as GuestCard & { wechatId?: string },
+        phase: 'match-success',
+      }));
+    } else {
+      // Just sent notification, go to daily complete
+      setState(prev => ({ ...prev, lastMatchedGuest: guest, phase: 'match-success' }));
+    }
+  }, [state.user, state.guests]);
 
-  const goToProfile = useCallback(() => {
-    setState(prev => ({ ...prev, lightNotifications: generateMockLightNotifications(), matches: generateMockMatches(), phase: 'profile' }));
-  }, []);
+  const goToProfile = useCallback(async () => {
+    if (!state.user) return;
+    const [notifications, matches] = await Promise.all([
+      fetchMyNotifications(state.user.id),
+      fetchMyMatches(state.user.id),
+    ]);
+    setState(prev => ({
+      ...prev,
+      lightNotifications: notifications as LightRecord[],
+      matches: matches as MatchRecord[],
+      phase: 'profile',
+    }));
+  }, [state.user]);
 
-  const goToNotifications = useCallback(() => {
-    setState(prev => ({ ...prev, lightNotifications: generateMockLightNotifications(), phase: 'notifications' }));
-  }, []);
+  const goToNotifications = useCallback(async () => {
+    if (!state.user) return;
+    const notifications = await fetchMyNotifications(state.user.id);
+    setState(prev => ({ ...prev, lightNotifications: notifications as LightRecord[], phase: 'notifications' }));
+  }, [state.user]);
 
   const viewNotification = useCallback((notification: LightRecord) => {
     setState(prev => ({ ...prev, selectedNotification: notification, phase: 'notification-detail' }));
   }, []);
 
-  const respondToLight = useCallback((notificationId: string, accept: boolean) => {
-    setState(prev => {
-      const notification = prev.lightNotifications.find(n => n.id === notificationId);
-      if (!notification) return prev;
-      if (accept) {
-        const newMatch: MatchRecord = {
+  const respondToLight = useCallback(async (notificationId: string, accept: boolean) => {
+    const notification = state.lightNotifications.find(n => n.id === notificationId);
+    if (!notification || !state.user) return;
+
+    const result = await respondToLightNotification(
+      notificationId,
+      notification.fromUser.nickname, // fromUserId — we'll use the notification's from_user_id
+      state.user.id,
+      accept
+    );
+
+    if (accept && result.matched) {
+      setState(prev => ({
+        ...prev,
+        lightNotifications: prev.lightNotifications.map(n => n.id === notificationId ? { ...n, status: 'matched' as const } : n),
+        matches: [...prev.matches, {
           id: `match-${Date.now()}`,
           user: { nickname: notification.fromUser.nickname, avatarColor: notification.fromUser.avatarColor },
-          wechatId: 'soul_mate_' + Math.floor(Math.random() * 9999),
+          wechatId: result.wechatId || '',
           matchedAt: new Date().toISOString(),
-        };
-        return {
-          ...prev,
-          lightNotifications: prev.lightNotifications.map(n => n.id === notificationId ? { ...n, status: 'matched' as const } : n),
-          matches: [...prev.matches, newMatch],
-          lastMatchedGuest: {
-            id: notification.fromUser.nickname,
-            nickname: notification.fromUser.nickname,
-            avatarColor: notification.fromUser.avatarColor,
-            answers: notification.fromUser.answers,
-            lightStatus: 'on',
-          },
-          phase: 'match-success',
-        };
-      } else {
-        return {
-          ...prev,
-          lightNotifications: prev.lightNotifications.map(n => n.id === notificationId ? { ...n, status: 'ignored' as const } : n),
-          phase: 'notifications',
-        };
-      }
-    });
-  }, []);
+        }],
+        lastMatchedGuest: {
+          id: notification.id,
+          nickname: notification.fromUser.nickname,
+          avatarColor: notification.fromUser.avatarColor,
+          answers: notification.fromUser.answers,
+          lightStatus: 'on',
+        },
+        phase: 'match-success',
+      }));
+    } else {
+      setState(prev => ({
+        ...prev,
+        lightNotifications: prev.lightNotifications.map(n => n.id === notificationId ? { ...n, status: 'ignored' as const } : n),
+        phase: 'profile',
+      }));
+    }
+  }, [state.lightNotifications, state.user]);
 
   const welcomeDone = useCallback(() => {
     setState(prev => {
