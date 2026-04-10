@@ -4,29 +4,40 @@
  */
 import { supabase, isOnline } from '../lib/supabase';
 
-// ============ Email Verification (Supabase Auth OTP) ============
+// ============ Email Verification (via Vercel Serverless + Resend) ============
 export async function sendVerificationCode(email: string): Promise<{ success: boolean; error?: string }> {
-  if (isOnline() && supabase) {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
-    });
-    if (error) return { success: false, error: error.message };
-    return { success: true };
+  if (isOnline()) {
+    try {
+      const res = await fetch('/api/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) return { success: false, error: data.error || '发送失败' };
+      return { success: true };
+    } catch {
+      return { success: false, error: '网络错误，请重试' };
+    }
   }
-  // offline — skip, auto-pass
+  // offline — auto-pass
   return { success: true };
 }
 
 export async function verifyOtpCode(email: string, code: string): Promise<{ success: boolean; error?: string }> {
-  if (isOnline() && supabase) {
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: code,
-      type: 'email',
-    });
-    if (error) return { success: false, error: error.message };
-    return { success: true };
+  if (isOnline()) {
+    try {
+      const res = await fetch('/api/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code }),
+      });
+      const data = await res.json();
+      if (!res.ok) return { success: false, error: data.error || '验证失败' };
+      return { success: true };
+    } catch {
+      return { success: false, error: '网络错误，请重试' };
+    }
   }
   // offline — any code passes
   return { success: true };
