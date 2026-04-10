@@ -20,7 +20,7 @@ import NotificationDetailPage from './pages/NotificationDetailPage';
 
 function App() {
   const {
-    state, setPhase, verifyEmail, registerUser, login, setPreferences,
+    state, setPhase, sendCode, verifyCode, registerUser, login, setPreferences,
     submitAnswer, finishAnswering, updateGuestLight, finalizeLight,
     goToProfile, goToNotifications, viewNotification, respondToLight,
     welcomeDone, startNewDay, goToDailyComplete, deleteAccount, logout,
@@ -65,7 +65,7 @@ function App() {
           {state.phase === 'sorry' && <SorryPage onBack={() => setPhase('landing')} />}
           {state.phase === 'onboarding' && <OnboardingPage onComplete={() => setPhase('verify')} />}
           {(state.phase === 'verify' || state.phase === 'verify-sent') && (
-            <VerifyPage phase={state.phase} onVerify={verifyEmail} />
+            <VerifyPage phase={state.phase} onSendCode={sendCode} onVerifyCode={verifyCode} />
           )}
           {state.phase === 'login' && (
             <LoginPage onLogin={login} onGoRegister={() => setPhase('onboarding')} />

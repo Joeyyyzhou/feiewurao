@@ -4,6 +4,34 @@
  */
 import { supabase, isOnline } from '../lib/supabase';
 
+// ============ Email Verification (Supabase Auth OTP) ============
+export async function sendVerificationCode(email: string): Promise<{ success: boolean; error?: string }> {
+  if (isOnline() && supabase) {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  }
+  // offline — skip, auto-pass
+  return { success: true };
+}
+
+export async function verifyOtpCode(email: string, code: string): Promise<{ success: boolean; error?: string }> {
+  if (isOnline() && supabase) {
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: 'email',
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  }
+  // offline — any code passes
+  return { success: true };
+}
+
 // ============ PV ============
 export async function recordPV(): Promise<number> {
   if (isOnline() && supabase) {

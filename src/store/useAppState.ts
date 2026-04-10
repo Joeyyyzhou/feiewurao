@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { UserProfile, Answer, GuestCard, LightRecord, MatchRecord, AppPhase } from './mockData';
 import { generateMockGuests, generateMockLightNotifications, generateMockMatches, getTodayQuestions } from './mockData';
-import { registerUser as apiRegisterUser, submitAnswer as apiSubmitAnswer, recordLightAction } from '../lib/api';
+import { registerUser as apiRegisterUser, submitAnswer as apiSubmitAnswer, recordLightAction, sendVerificationCode, verifyOtpCode } from '../lib/api';
 import type { Question } from '../data/questions';
 
 // ===== Session persistence =====
@@ -99,11 +99,20 @@ export function useAppState() {
     setState(prev => ({ ...prev, phase }));
   }, []);
 
-  const verifyEmail = useCallback((_email: string) => {
-    setState(prev => ({ ...prev, phase: 'verify-sent' }));
-    setTimeout(() => {
-      setState(prev => ({ ...prev, phase: 'register-info' }));
-    }, 2000);
+  const sendCode = useCallback(async (email: string): Promise<{ success: boolean; error?: string }> => {
+    const res = await sendVerificationCode(email);
+    if (res.success) {
+      setState(prev => ({ ...prev, phase: 'verify-sent' as AppPhase }));
+    }
+    return res;
+  }, []);
+
+  const verifyCode = useCallback(async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
+    const res = await verifyOtpCode(email, code);
+    if (res.success) {
+      setState(prev => ({ ...prev, phase: 'register-info' as AppPhase }));
+    }
+    return res;
   }, []);
 
   const registerUser = useCallback((profile: Omit<UserProfile, 'id' | 'createdAt' | 'dayCount' | 'prefGender' | 'prefBaseCities'>) => {
@@ -287,7 +296,7 @@ export function useAppState() {
   }, []);
 
   return {
-    state, setPhase, verifyEmail, registerUser, login, setPreferences,
+    state, setPhase, sendCode, verifyCode, registerUser, login, setPreferences,
     submitAnswer, finishAnswering, updateGuestLight, finalizeLight,
     goToProfile, goToNotifications, viewNotification, respondToLight,
     welcomeDone, startNewDay, goToDailyComplete, deleteAccount, logout,
