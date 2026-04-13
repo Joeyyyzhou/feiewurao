@@ -276,29 +276,74 @@ export async function getAdminStats() {
 }
 
 // ============ Real Guest Matching ============
-export async function fetchRealGuests(userId: string, prefGender: string, prefCities: string[], questionIds: number[]) {
+// Hard filter: gender preference only
+// Soft sort: same city first
+// Exclude: already seen guests
+// Require: must have answered at least 1 question
+export async function fetchRealGuests(userId: string, prefGender: string, userCity: string, questionIds: number[]) {
   if (isOnline() && supabase) {
-    let query = supabase.from('users').select('*').neq('id', userId).eq('gender', prefGender);
-    if (prefCities.length > 0) {
-      query = query.in('base_city', prefCities);
-    }
-    const { data: candidates } = await query.limit(20);
+    // 1. Get all users matching gender preference (exclude self)
+    const { data: candidates } = await supabase
+      .from('users')
+      .select('*')
+      .neq('id', userId)
+      .eq('gender', prefGender)
+      .limit(100);
+
     if (!candidates || candidates.length === 0) return [];
 
+    // 2. Get all answered user IDs to filter out those with no answers
     const candidateIds = candidates.map((c: { id: string }) => c.id);
-    const { data: answers } = await supabase
+    const { data: allAnswers } = await supabase
       .from('answers')
-      .select('*')
-      .in('user_id', candidateIds)
+      .select('user_id, question_id, content')
+      .in('user_id', candidateIds);
+
+    // Build set of users who have answered at least 1 question
+    const answeredUserIds = new Set((allAnswers || []).map((a: { user_id: string }) => a.user_id));
+
+    // 3. Get previously shown guests (to exclude repeats)
+    const { data: seenRecords } = await supabase
+      .from('light_actions')
+      .select('to_user_id')
+      .eq('from_user_id', userId);
+    const seenIds = new Set((seenRecords || []).map((r: { to_user_id: string }) => r.to_user_id));
+
+    // Also exclude users we already sent light notifications to
+    const { data: sentLights } = await supabase
+      .from('light_notifications')
+      .select('to_user_id')
+      .eq('from_user_id', userId);
+    (sentLights || []).forEach((r: { to_user_id: string }) => seenIds.add(r.to_user_id));
+
+    // 4. Filter: must have answers, not seen before
+    const eligible = candidates.filter((c: { id: string }) =>
+      answeredUserIds.has(c.id) && !seenIds.has(c.id)
+    );
+
+    if (eligible.length === 0) return [];
+
+    // 5. Soft sort: same city first, then shuffle within each group
+    const sameCity = eligible.filter((c: { base_city: string }) => c.base_city === userCity);
+    const otherCity = eligible.filter((c: { base_city: string }) => c.base_city !== userCity);
+    const shuffled = [
+      ...sameCity.sort(() => Math.random() - 0.5),
+      ...otherCity.sort(() => Math.random() - 0.5),
+    ].slice(0, 5);
+
+    // 6. Get answers for today's questions for the selected guests
+    const selectedIds = shuffled.map((c: { id: string }) => c.id);
+    const { data: guestAnswers } = await supabase
+      .from('answers')
+      .select('user_id, question_id, content')
+      .in('user_id', selectedIds)
       .in('question_id', questionIds);
 
-    // Shuffle and pick up to 5
-    const shuffled = candidates.sort(() => Math.random() - 0.5).slice(0, 5);
     return shuffled.map((c: { id: string; nickname: string; avatar_color: string }) => ({
       id: c.id,
       nickname: c.nickname,
       avatarColor: c.avatar_color,
-      answers: (answers || [])
+      answers: (guestAnswers || [])
         .filter((a: { user_id: string }) => a.user_id === c.id)
         .map((a: { question_id: number; content: string }) => ({ questionId: a.question_id, content: a.content })),
       lightStatus: 'on' as const,

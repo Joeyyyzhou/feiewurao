@@ -192,7 +192,7 @@ export function useAppState() {
     const guests = await fetchRealGuests(
       prev.user.id,
       prev.user.prefGender,
-      prev.user.prefBaseCities,
+      prev.user.baseCity,
       questionIds
     ) as GuestCard[];
     setState(p => ({ ...p, guests, phase: 'daily-guests' }));
