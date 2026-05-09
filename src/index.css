@@ -1,90 +1,214 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Noto+Serif+SC:wght@300;400;500;600&family=Inter+Tight:wght@400;500;600&display=swap');
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @theme {
-  --color-bg-start: #EDE7F6;
-  --color-bg-end: #D8D0EC;
-  --color-surface: rgba(255,255,255,0.55);
-  --color-surface-solid: #FFFFFF;
-  --color-surface-hover: rgba(255,255,255,0.7);
-  --color-primary: #7C6DD8;
-  --color-primary-dark: #6355C0;
-  --color-primary-light: #A99BEB;
-  --color-primary-soft: rgba(124,109,216,0.1);
-  --color-gold: #FFCA42;
-  --color-gold-glow: rgba(255,202,66,0.35);
-  --color-text: #1C1440;
-  --color-text-secondary: #6E6494;
-  --color-text-muted: #A99DBF;
-  --color-success: #4ADE80;
-  --color-danger: #F06060;
-  --color-border: rgba(255,255,255,0.6);
-  --color-border-subtle: rgba(140,120,184,0.15);
-  --font-family-sans: "Inter", "PingFang SC", "SF Pro Text", system-ui, sans-serif;
+  /* === Direction A · 信件美学 调色板 === */
+  /* 背景：奶油米 + 纸张 */
+  --color-bg: #F5F0E8;
+  --color-bg-start: #F5F0E8;
+  --color-bg-end: #EDE6D7;
+  --color-paper: #FBF8F1;
+  --color-ivory-deep: #EDE6D7;
+
+  /* Surface（卡片）：温白纸 */
+  --color-surface: #FBF8F1;
+  --color-surface-solid: #FBF8F1;
+  --color-surface-hover: #FFFFFF;
+  --color-surface-alt: rgba(251,248,241,0.7);
+
+  /* Primary：墨色（按钮主色） */
+  --color-primary: #1A1915;
+  --color-primary-dark: #0F0E0B;
+  --color-primary-light: #3D3A32;
+  --color-primary-soft: rgba(184,92,58,0.08);
+
+  /* Accent：赭石红（线条/重点/链接） */
+  --color-accent: #B85C3A;
+  --color-accent-deep: #8E4025;
+
+  /* Warm accent：火漆封红（高亮警示） */
+  --color-gold: #CC3D2E;
+  --color-gold-glow: rgba(204,61,46,0.18);
+
+  /* Sage：鼠尾草绿（辅助色） */
+  --color-sage: #7B8A5F;
+
+  /* Text */
+  --color-text: #1A1915;
+  --color-text-secondary: #3D3A32;
+  --color-text-muted: #8A8478;
+  --color-text-faint: #C9C2B2;
+
+  /* Status */
+  --color-success: #7B8A5F;
+  --color-danger: #B85C3A;
+
+  /* Borders */
+  --color-border: #D9D0BE;
+  --color-border-subtle: #E5DECD;
+
+  /* Typography */
+  --font-family-sans: "Inter Tight", "PingFang SC", "SF Pro Text", system-ui, sans-serif;
+  --font-family-serif: "Fraunces", "Noto Serif SC", "Songti SC", "STSong", serif;
+  --font-family-cn: "Noto Serif SC", "Songti SC", "STSong", serif;
 }
 
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: var(--font-family-sans);
+  font-family: var(--font-family-cn);
   color: var(--color-text);
-  background: linear-gradient(170deg, #EDE7F6 0%, #DED6F0 50%, #D0C8E4 100%);
+  background:
+    radial-gradient(ellipse 600px 400px at 18% 6%, rgba(184,92,58,0.05), transparent 60%),
+    radial-gradient(ellipse 800px 500px at 82% 92%, rgba(123,138,95,0.06), transparent 60%),
+    var(--color-bg);
+  background-attachment: fixed;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Glass card */
-.glass {
-  background: rgba(255,255,255,0.5);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255,255,255,0.7);
-  box-shadow: 0 4px 24px rgba(120,100,170,0.08);
+/* 全局纸张噪点纹理 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.55;
+  mix-blend-mode: multiply;
+}
+#root { position: relative; z-index: 2; }
+
+/* === 字体 utility === */
+.font-display { font-family: var(--font-family-serif); }
+.font-cn { font-family: var(--font-family-cn); }
+.font-meta { font-family: var(--font-family-sans); }
+
+/* === Card：温白纸 + 信件式硬边框 === */
+.card, .glass {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.02), 0 20px 40px -20px rgba(26,25,21,0.08);
+  border-radius: 0;
 }
 
-/* Primary gradient button */
+/* === Primary button：墨色长方按钮，hover 变赭石 === */
 .btn-primary {
-  background: linear-gradient(135deg, #8981E1 0%, #6C63D4 100%);
-  color: white;
-  font-weight: 600;
-  box-shadow: 0 4px 16px rgba(108,99,212,0.3);
-  transition: all 0.2s;
+  background: var(--color-primary);
+  color: var(--color-paper);
+  font-family: var(--font-family-sans);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  border-radius: 2px;
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 .btn-primary:hover {
-  box-shadow: 0 6px 24px rgba(108,99,212,0.4);
+  background: var(--color-accent-deep);
   transform: translateY(-1px);
 }
 
-/* Glass button */
+/* === Secondary（玻璃 → 墨边） === */
 .btn-glass {
-  background: rgba(255,255,255,0.6);
-  border: 1px solid rgba(255,255,255,0.8);
+  background: transparent;
+  border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
-  backdrop-filter: blur(12px);
-  transition: all 0.2s;
+  font-family: var(--font-family-sans);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  border-radius: 2px;
+  transition: all 0.2s ease;
 }
 .btn-glass:hover {
-  background: rgba(255,255,255,0.8);
+  border-color: var(--color-text);
   color: var(--color-text);
 }
 
-/* Glass input */
+/* === Input：稿纸式 === */
 .input-glass {
-  background: rgba(255,255,255,0.5);
-  border: 1.5px solid rgba(140,120,184,0.2);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-subtle);
   color: var(--color-text);
-  transition: all 0.2s;
+  font-family: var(--font-family-cn);
+  border-radius: 0;
+  transition: all 0.2s ease;
 }
 .input-glass:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(124,109,216,0.12);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(184,92,58,0.1);
   outline: none;
-  background: rgba(255,255,255,0.7);
+  background: var(--color-paper);
 }
-.input-glass::placeholder { color: var(--color-text-muted); }
+.input-glass::placeholder {
+  color: var(--color-text-faint);
+  font-style: italic;
+}
 
+/* === Tag（标签） === */
+.tag {
+  font-family: var(--font-family-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  padding: 5px 12px;
+  background: var(--color-ivory-deep);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* === Eyebrow（小标记，赭石色 + uppercase） === */
+.eyebrow {
+  font-family: var(--font-family-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.eyebrow::before {
+  content: '';
+  width: 18px;
+  height: 1px;
+  background: var(--color-accent);
+}
+
+/* === Quote 引言块 === */
+.quote-block {
+  border-left: 3px solid var(--color-accent);
+  background: rgba(184,92,58,0.04);
+  padding: 20px 24px;
+}
+
+/* === Highlight 块（带边框 emoji） === */
+.highlight-block {
+  background: var(--color-paper);
+  border: 1px solid var(--color-accent);
+  display: flex;
+  gap: 14px;
+  padding: 20px 22px;
+  border-radius: 0;
+}
+
+/* === 4 色语义 tag (破冰/深入/灵魂/生活) === */
+.tag-blue { background: rgba(125,156,188,0.12); color: #4D6E92; }
+.tag-orange { background: rgba(184,112,60,0.14); color: #A85820; }
+.tag-pink { background: rgba(178,90,110,0.12); color: #9C4258; }
+.tag-green { background: rgba(123,138,95,0.14); color: #5C6E45; }
+
+/* Scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(140,120,184,0.2); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: rgba(26,25,21,0.12); border-radius: 2px; }
 .picker-wheel { -ms-overflow-style: none; scrollbar-width: none; }
 .picker-wheel::-webkit-scrollbar { display: none; }

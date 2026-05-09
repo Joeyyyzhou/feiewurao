@@ -85,19 +85,55 @@ export interface UserRow {
 }
 
 export async function registerUser(u: Omit<UserRow, 'id' | 'order_num' | 'day_count' | 'created_at'>): Promise<{ id: string; orderNum: number }> {
-  if (isOnline() && supabase) {
-    const { data, error } = await supabase.from('users').insert(u).select('id, order_num').single();
-    if (error) throw error;
-    return { id: data.id, orderNum: data.order_num };
+  // 通过 API route 注册（服务端加密微信号）
+  try {
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(u),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || '注册失败');
+    return { id: data.id, orderNum: data.orderNum };
+  } catch (e) {
+    // 兜底：直接用 Supabase（微信号不加密）
+    if (isOnline() && supabase) {
+      const { data, error } = await supabase.from('users').insert(u).select('id, order_num').single();
+      if (error) throw error;
+      return { id: data.id, orderNum: data.order_num };
+    }
+    throw e;
   }
-  // offline
-  const count = parseInt(localStorage.getItem('feierwurao_user_count') || '0', 10) + 1;
-  localStorage.setItem('feierwurao_user_count', String(count));
-  const id = `user-${Date.now()}`;
-  const users = JSON.parse(localStorage.getItem('feierwurao_users') || '[]');
-  users.push({ ...u, id, order_num: count, created_at: new Date().toISOString() });
-  localStorage.setItem('feierwurao_users', JSON.stringify(users));
-  return { id, orderNum: count };
+}
+
+// 通过后端 API 更新资料（wechat_id 走加密）
+export async function updateUserProfile(
+  userId: string,
+  fields: { nickname?: string; baseCity?: string; wechatId?: string }
+): Promise<boolean> {
+  try {
+    const res = await fetch('/api/update-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, ...fields }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || '更新资料失败');
+    return true;
+  } catch (e) {
+    // 兜底：直接走 supabase（wechat_id 不加密）。仅在 API 路由不可用时触发。
+    if (isOnline() && supabase) {
+      const dbFields: Record<string, string> = {};
+      if (fields.nickname) dbFields.nickname = fields.nickname;
+      if (fields.baseCity) dbFields.base_city = fields.baseCity;
+      if (fields.wechatId) dbFields.wechat_id = fields.wechatId;
+      if (Object.keys(dbFields).length === 0) return false;
+      const { error } = await supabase.from('users').update(dbFields).eq('id', userId);
+      if (error) throw error;
+      return true;
+    }
+    throw e;
+  }
 }
 
 // ============ Answers ============
@@ -132,13 +168,8 @@ export async function recordLightAction(fromUserId: string, toUserId: string, ac
 }
 
 // ============ Final Light (留灯通知) ============
-export async function sendLightNotification(fromUserId: string, toUserId: string): Promise<void> {
-  if (isOnline() && supabase) {
-    await supabase.from('light_notifications').insert({ from_user_id: fromUserId, to_user_id: toUserId });
-    return;
-  }
-  // offline — skip
-}
+// 注意：sendLightNotification/createMatch 已废弃——所有留灯/匹配必须走后端 /api/match
+// （否则会绕过邮件发送）。如需直接写库请通过 finalizeLightAction / respondToLightNotification。
 
 export async function getMyLightNotifications(userId: string): Promise<unknown[]> {
   if (isOnline() && supabase) {
@@ -153,15 +184,8 @@ export async function getMyLightNotifications(userId: string): Promise<unknown[]
 }
 
 // ============ Matches ============
-export async function createMatch(user1Id: string, user2Id: string): Promise<void> {
-  if (isOnline() && supabase) {
-    await supabase.from('matches').insert({ user1_id: user1Id, user2_id: user2Id });
-    return;
-  }
-  const matches = JSON.parse(localStorage.getItem('feierwurao_matches') || '[]');
-  matches.push({ user1_id: user1Id, user2_id: user2Id, matched_at: new Date().toISOString() });
-  localStorage.setItem('feierwurao_matches', JSON.stringify(matches));
-}
+// 注意：createMatch 已废弃——matches 写库统一在后端 /api/match 中完成（finalize/respond 路径）
+// 这样能保证发邮件链路同时触发。前端不再直接 INSERT。
 
 // ============ Guest Matching (get eligible guests) ============
 export async function getEligibleGuests(userId: string, prefGender: string, prefCities: string[], questionIds: number[]): Promise<unknown[]> {
@@ -276,14 +300,24 @@ export async function getAdminStats() {
 }
 
 // ============ Real Guest Matching ============
-// Hard filter: gender preference only
-// Soft sort: same city first
-// Guests CAN reappear, but shown with different questions each time
-// Only exclude: guests you already sent a light notification to (confirmed interest)
-// Require: must have answered at least 1 question
-export async function fetchRealGuests(userId: string, prefGender: string, userCity: string, questionIds: number[]) {
+// 核心逻辑：
+// 1. 性别偏好硬筛
+// 2. 嘉宾必须和你有共同回答过的题（不限当天）
+// 3. 展示给你看的是共同题目的回答（对比才有意义）
+// 4. 按共同回答数量排序（重叠越多越优先）+ 同城优先
+// 5. 已留灯的嘉宾不再出现
+export async function fetchRealGuests(userId: string, prefGender: string, userCity: string, _questionIds: number[]) {
   if (isOnline() && supabase) {
-    // 1. Get all users matching gender preference (exclude self)
+    // 1. 获取当前用户回答过的所有题目 ID
+    const { data: myAnswers } = await supabase
+      .from('answers')
+      .select('question_id')
+      .eq('user_id', userId);
+    
+    const myAnsweredIds = new Set((myAnswers || []).map((a: { question_id: number }) => a.question_id));
+    if (myAnsweredIds.size === 0) return [];
+
+    // 2. 获取符合性别偏好的候选人（排除自己）
     const { data: candidates } = await supabase
       .from('users')
       .select('*')
@@ -293,80 +327,67 @@ export async function fetchRealGuests(userId: string, prefGender: string, userCi
 
     if (!candidates || candidates.length === 0) return [];
 
-    // 2. Get all answered user IDs to filter out those with no answers
+    // 3. 获取所有候选人的回答
     const candidateIds = candidates.map((c: { id: string }) => c.id);
     const { data: allAnswers } = await supabase
       .from('answers')
       .select('user_id, question_id, content')
       .in('user_id', candidateIds);
 
-    const answeredUserIds = new Set((allAnswers || []).map((a: { user_id: string }) => a.user_id));
+    // 4. 计算每个候选人和我的共同回答题目数
+    const candidateAnswerMap = new Map<string, { question_id: number; content: string }[]>();
+    (allAnswers || []).forEach((a: { user_id: string; question_id: number; content: string }) => {
+      if (!candidateAnswerMap.has(a.user_id)) candidateAnswerMap.set(a.user_id, []);
+      candidateAnswerMap.get(a.user_id)!.push({ question_id: a.question_id, content: a.content });
+    });
 
-    // 3. Only exclude guests you already CONFIRMED interest in (sent light notification)
-    // Guests you previously saw and dismissed CAN reappear with different questions
+    // 5. 排除已留灯的嘉宾 + 被拉黑的用户
     const { data: sentLights } = await supabase
       .from('light_notifications')
       .select('to_user_id')
       .eq('from_user_id', userId);
     const confirmedIds = new Set((sentLights || []).map((r: { to_user_id: string }) => r.to_user_id));
 
-    // 4. Filter: must have answers, not already confirmed
-    const eligible = candidates.filter((c: { id: string }) =>
-      answeredUserIds.has(c.id) && !confirmedIds.has(c.id)
-    );
+    const blockedIds = new Set(await getBlockedUserIds(userId));
 
-    if (eligible.length === 0) return [];
+    // 6. 筛选 + 排序
+    const eligible = candidates
+      .filter((c: { id: string }) => {
+        if (confirmedIds.has(c.id)) return false;
+        if (blockedIds.has(c.id)) return false; // 排除被拉黑的用户
+        const answers = candidateAnswerMap.get(c.id) || [];
+        // 必须有至少1道共同回答的题
+        return answers.some(a => myAnsweredIds.has(a.question_id));
+      })
+      .map((c: { id: string; nickname: string; avatar_color: string; base_city: string }) => {
+        const answers = candidateAnswerMap.get(c.id) || [];
+        const commonAnswers = answers.filter(a => myAnsweredIds.has(a.question_id));
+        return {
+          ...c,
+          commonCount: commonAnswers.length,
+          commonAnswers,
+        };
+      })
+      // 排序：共同回答数多的优先，同城优先
+      .sort((a: { commonCount: number; base_city: string }, b: { commonCount: number; base_city: string }) => {
+        const cityA = a.base_city === userCity ? 1 : 0;
+        const cityB = b.base_city === userCity ? 1 : 0;
+        if (cityB !== cityA) return cityB - cityA;
+        return b.commonCount - a.commonCount;
+      })
+      .slice(0, 5);
 
-    // 5. Soft sort: same city first, then shuffle within each group
-    const sameCity = eligible.filter((c: { base_city: string }) => c.base_city === userCity);
-    const otherCity = eligible.filter((c: { base_city: string }) => c.base_city !== userCity);
-    const sorted = [
-      ...sameCity.sort(() => Math.random() - 0.5),
-      ...otherCity.sort(() => Math.random() - 0.5),
-    ].slice(0, 5);
-
-    // 6. For each guest, get answers but EXCLUDE questions already shown to this user
-    // Get previously shown question-guest pairs
-    const { data: seenPairs } = await supabase
-      .from('light_actions')
-      .select('to_user_id, question_id')
-      .eq('from_user_id', userId);
-
-    const seenMap = new Map<string, Set<number>>();
-    (seenPairs || []).forEach((r: { to_user_id: string; question_id: number }) => {
-      if (!seenMap.has(r.to_user_id)) seenMap.set(r.to_user_id, new Set());
-      seenMap.get(r.to_user_id)!.add(r.question_id);
-    });
-
-    const selectedIds = sorted.map((c: { id: string }) => c.id);
-    const { data: guestAnswers } = await supabase
-      .from('answers')
-      .select('user_id, question_id, content')
-      .in('user_id', selectedIds);
-
-    return sorted.map((c: { id: string; nickname: string; avatar_color: string }) => {
-      const seenQs = seenMap.get(c.id) || new Set();
-      // Prefer today's questions, but filter out already-seen ones
-      let answers = (guestAnswers || [])
-        .filter((a: { user_id: string; question_id: number }) =>
-          a.user_id === c.id && !seenQs.has(a.question_id)
-        );
-      // Prioritize today's question IDs
-      const todayAnswers = answers.filter((a: { question_id: number }) => questionIds.includes(a.question_id));
-      const otherAnswers = answers.filter((a: { question_id: number }) => !questionIds.includes(a.question_id));
-      const finalAnswers = [...todayAnswers, ...otherAnswers].slice(0, 4);
-
-      return {
-        id: c.id,
-        nickname: c.nickname,
-        avatarColor: c.avatar_color,
-        answers: finalAnswers.map((a: { question_id: number; content: string }) => ({
-          questionId: a.question_id,
-          content: a.content,
-        })),
-        lightStatus: 'on' as const,
-      };
-    });
+    // 7. 构建嘉宾卡片——只展示共同题目的回答（最多4题）
+    return eligible.map((c: { id: string; nickname: string; avatar_color: string; commonAnswers: { question_id: number; content: string }[] }) => ({
+      id: c.id,
+      nickname: c.nickname,
+      avatarColor: c.avatar_color,
+      answers: c.commonAnswers.slice(0, 4).map(a => ({
+        questionId: a.question_id,
+        content: a.content,
+      })),
+      lightStatus: 'on' as const,
+    }));
   }
   return [];
 }
@@ -393,6 +414,7 @@ export async function fetchMyNotifications(userId: string) {
       return {
         id: n.id,
         fromUser: {
+          id: n.from_user_id,
           nickname: u?.nickname || '匿名',
           avatarColor: u?.avatar_color || '#7C6DD8',
           answers: (answers || [])
@@ -423,15 +445,30 @@ export async function fetchMyMatches(userId: string) {
     const otherIds = data.map((m: { user1_id: string; user2_id: string }) =>
       m.user1_id === userId ? m.user2_id : m.user1_id
     );
-    const { data: users } = await supabase.from('users').select('id, nickname, avatar_color, wechat_id').in('id', otherIds);
+    const { data: users } = await supabase.from('users').select('id, nickname, avatar_color').in('id', otherIds);
+
+    // 解密每个匹配对象的微信号
+    const wechatMap = new Map<string, string>();
+    for (const otherId of otherIds) {
+      try {
+        const res = await fetch('/api/match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get-match-wechat', matchedUserId: otherId }),
+        });
+        const result = await res.json();
+        if (result.success) wechatMap.set(otherId, result.wechatId);
+      } catch { /* ignore */ }
+    }
 
     return data.map((m: { id: string; user1_id: string; user2_id: string; matched_at: string }) => {
       const otherId = m.user1_id === userId ? m.user2_id : m.user1_id;
       const u = (users || []).find((x: { id: string }) => x.id === otherId);
       return {
         id: m.id,
+        userId: otherId,
         user: { nickname: u?.nickname || '匿名', avatarColor: u?.avatar_color || '#7C6DD8' },
-        wechatId: u?.wechat_id || '',
+        wechatId: wechatMap.get(otherId) || '',
         matchedAt: m.matched_at,
       };
     });
@@ -441,46 +478,144 @@ export async function fetchMyMatches(userId: string) {
 
 // ============ Finalize Light (send notification + check mutual) ============
 export async function finalizeLightAction(fromUserId: string, toUserId: string): Promise<{ matched: boolean; wechatId?: string }> {
-  if (isOnline() && supabase) {
-    // Send light notification
-    await supabase.from('light_notifications').insert({ from_user_id: fromUserId, to_user_id: toUserId });
-
-    // Check if the other person already lit for me (mutual match)
-    const { data: mutual } = await supabase
-      .from('light_notifications')
-      .select('id')
-      .eq('from_user_id', toUserId)
-      .eq('to_user_id', fromUserId)
-      .eq('status', 'pending')
-      .limit(1);
-
-    if (mutual && mutual.length > 0) {
-      // Mutual match! Create match record
-      await supabase.from('matches').insert({ user1_id: fromUserId, user2_id: toUserId });
-      // Update both notifications to matched
-      await supabase.from('light_notifications').update({ status: 'matched' }).eq('from_user_id', toUserId).eq('to_user_id', fromUserId);
-      await supabase.from('light_notifications').update({ status: 'matched' }).eq('from_user_id', fromUserId).eq('to_user_id', toUserId);
-      // Get matched user's wechat
-      const { data: matchedUser } = await supabase.from('users').select('wechat_id').eq('id', toUserId).single();
-      return { matched: true, wechatId: matchedUser?.wechat_id || '' };
-    }
+  try {
+    const res = await fetch('/api/match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'finalize', fromUserId, toUserId }),
+    });
+    const data = await res.json();
+    return { matched: data.matched || false, wechatId: data.wechatId || '' };
+  } catch {
     return { matched: false };
   }
-  return { matched: false };
 }
 
 // ============ Respond to Light ============
 export async function respondToLightNotification(notificationId: string, fromUserId: string, toUserId: string, accept: boolean): Promise<{ matched: boolean; wechatId?: string }> {
+  try {
+    const res = await fetch('/api/match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'respond', notificationId, fromUserId, toUserId, accept }),
+    });
+    const data = await res.json();
+    return { matched: data.matched || false, wechatId: data.wechatId || '' };
+  } catch {
+    return { matched: false };
+  }
+}
+
+// ============ Delete User Account ============
+export async function deleteUserAccount(userId: string): Promise<boolean> {
   if (isOnline() && supabase) {
-    if (accept) {
-      await supabase.from('light_notifications').update({ status: 'matched' }).eq('id', notificationId);
-      await supabase.from('matches').insert({ user1_id: fromUserId, user2_id: toUserId });
-      const { data: matchedUser } = await supabase.from('users').select('wechat_id').eq('id', fromUserId).single();
-      return { matched: true, wechatId: matchedUser?.wechat_id || '' };
-    } else {
-      await supabase.from('light_notifications').update({ status: 'ignored' }).eq('id', notificationId);
-      return { matched: false };
+    try {
+      // 级联删除会自动处理 answers, light_actions, light_notifications, matches（因为数据库 schema 用了 ON DELETE CASCADE）
+      const { error } = await supabase.from('users').delete().eq('id', userId);
+      if (error) { console.error('删除用户失败:', error); return false; }
+      return true;
+    } catch (e) {
+      console.error('删除用户异常:', e);
+      return false;
     }
   }
-  return { matched: false };
+  return false;
+}
+
+// ============ Email Notification ============
+export async function sendNotifyEmail(toEmail: string, type: 'light' | 'match', fromNickname?: string): Promise<void> {
+  try {
+    await fetch('/api/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ toEmail, type, fromNickname }),
+    });
+  } catch (e) {
+    console.error('发送通知邮件失败:', e);
+  }
+}
+
+// ============ Get User Answers by ID ============
+export async function getUserAnswers(userId: string): Promise<{ questionId: number; content: string }[]> {
+  if (isOnline() && supabase) {
+    const { data } = await supabase
+      .from('answers')
+      .select('question_id, content')
+      .eq('user_id', userId)
+      .order('question_id');
+    return (data || []).map((a: { question_id: number; content: string }) => ({
+      questionId: a.question_id,
+      content: a.content,
+    }));
+  }
+  return [];
+}
+
+// ============ Report & Block ============
+export async function reportUser(
+  fromUserId: string,
+  toUserId: string,
+  reason: string,
+  questionId?: number,
+  answerContent?: string,
+): Promise<void> {
+  if (isOnline() && supabase) {
+    await supabase.from('reports').insert({
+      from_user_id: fromUserId,
+      to_user_id: toUserId,
+      reason,
+      question_id: questionId || null,
+      answer_content: answerContent || null,
+    });
+  }
+}
+
+export async function blockUser(fromUserId: string, toUserId: string): Promise<void> {
+  if (isOnline() && supabase) {
+    // Upsert to avoid duplicate block entries
+    await supabase.from('blocks').upsert({
+      blocker_id: fromUserId,
+      blocked_id: toUserId,
+    }, { onConflict: 'blocker_id,blocked_id' });
+  }
+}
+
+export async function getBlockedUserIds(userId: string): Promise<string[]> {
+  if (isOnline() && supabase) {
+    const { data } = await supabase
+      .from('blocks')
+      .select('blocked_id')
+      .eq('blocker_id', userId);
+    return (data || []).map((r: { blocked_id: string }) => r.blocked_id);
+  }
+  return [];
+}
+// 通过 Vercel API route 获取（使用 service key，绕过 RLS）
+export async function syncUserState(_userId: string, email?: string): Promise<{
+  dbUserId: string;
+  dayCount: number;
+  todayAnsweredCount: number;
+  createdAt: string;
+  answeredQuestionIds: number[];
+} | null> {
+  if (!email) return null;
+  try {
+    const res = await fetch('/api/sync-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!data.success) return null;
+    return {
+      dbUserId: data.userId,
+      dayCount: data.dayCount,
+      todayAnsweredCount: data.todayAnswerCount,
+      createdAt: data.createdAt,
+      answeredQuestionIds: data.answeredQuestionIds || [],
+    };
+  } catch (e) {
+    console.error('syncUserState fetch error:', e);
+    return null;
+  }
 }

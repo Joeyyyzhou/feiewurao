@@ -65,7 +65,7 @@ export default function AdminPage({ onBack }: Props) {
       {/* Header */}
       <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-lg border-b border-border-subtle">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
-          <button onClick={onBack} className="p-1.5 -ml-1.5 rounded-xl hover:bg-white/60 transition-colors">
+          <button onClick={onBack} className="p-1.5 -ml-1.5 rounded-xl hover:bg-surface transition-colors">
             <ArrowLeft className="w-5 h-5 text-text" />
           </button>
           <div>

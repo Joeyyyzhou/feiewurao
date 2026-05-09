@@ -28,16 +28,37 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { email } = req.body;
-  if (!email || !email.endsWith('@tencent.com')) {
-    return res.status(400).json({ error: '请输入 @tencent.com 邮箱' });
+  // 严格校验：必须是 xxx@tencent.com 格式，@前至少1个合法字符
+  const tencentEmailRegex = /^[a-zA-Z0-9._%+-]+@tencent\.com$/;
+  if (!email || !tencentEmailRegex.test(email.trim().toLowerCase())) {
+    return res.status(400).json({ error: '请输入有效的 @tencent.com 邮箱' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  // 限频检查：60秒内同一邮箱只能发送一次
+  const { data: existing } = await supabase
+    .from('verification_codes')
+    .select('created_at')
+    .eq('email', cleanEmail)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    const lastSent = new Date(existing[0].created_at).getTime();
+    const elapsed = Date.now() - lastSent;
+    if (elapsed < 60000) {
+      const remaining = Math.ceil((60000 - elapsed) / 1000);
+      return res.status(429).json({ error: `请${remaining}秒后再试`, cooldown: remaining });
+    }
   }
 
   const code = generateCode();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  await supabase.from('verification_codes').delete().eq('email', email);
+  await supabase.from('verification_codes').delete().eq('email', cleanEmail);
   const { error: dbError } = await supabase.from('verification_codes').insert({
-    email, code, expires_at: expiresAt,
+    email: cleanEmail, code, expires_at: expiresAt,
   });
 
   if (dbError) {

@@ -14,15 +14,15 @@ export default function MatchSuccessPage({ guest, wechatId, onContinue, onGoHome
     if (!fired.current) { fired.current = true;
       const end = Date.now() + 2500;
       const f = () => {
-        confetti({ particleCount: 3, angle: 60, spread: 50, origin: { x: 0, y: 0.7 }, colors: ['#8981E1', '#D5A3F3', '#FFCA42', '#EDE7F6', '#4ADE80'] });
-        confetti({ particleCount: 3, angle: 120, spread: 50, origin: { x: 1, y: 0.7 }, colors: ['#8981E1', '#D5A3F3', '#FFCA42', '#EDE7F6', '#4ADE80'] });
+        confetti({ particleCount: 3, angle: 60, spread: 50, origin: { x: 0, y: 0.7 }, colors: ['#6B5CE7', '#E8A855', '#34C77B', '#F8F6F3', '#F472B6'] });
+        confetti({ particleCount: 3, angle: 120, spread: 50, origin: { x: 1, y: 0.7 }, colors: ['#6B5CE7', '#E8A855', '#34C77B', '#F8F6F3', '#F472B6'] });
         if (Date.now() < end) requestAnimationFrame(f);
       }; f();
     }
   }, []);
 
   if (!guest) return null;
-  const guestWechat = wechatId || 'soul_mate_2026';
+  const guestWechat = (guest as GuestCard & { wechatId?: string }).wechatId || '';
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
@@ -40,16 +40,22 @@ export default function MatchSuccessPage({ guest, wechatId, onContinue, onGoHome
           你们亮了彼此的灯 ✨<br />接下来的故事由你们书写
         </motion.p>
 
-        <motion.div className="glass rounded-3xl p-6 mb-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>
+        <motion.div className="glass rounded-2xl p-6 mb-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>
           <p className="text-xs text-text-secondary mb-2">TA 的微信号</p>
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-xl font-bold text-text">{guestWechat}</span>
-            <button onClick={() => { navigator.clipboard.writeText(guestWechat); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-              className={`p-2 rounded-xl transition-all ${copied ? 'bg-green-100 text-success' : 'btn-glass'}`}>
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            </button>
-          </div>
-          {copied && <p className="text-success text-xs mt-1.5">已复制</p>}
+          {guestWechat ? (
+            <>
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-xl font-bold text-text">{guestWechat}</span>
+                <button onClick={() => { navigator.clipboard.writeText(guestWechat); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                  className={`p-2 rounded-xl transition-all ${copied ? 'bg-green-100 text-success' : 'btn-glass'}`}>
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+              {copied && <p className="text-success text-xs mt-1.5">已复制</p>}
+            </>
+          ) : (
+            <p className="text-sm text-text-muted">微信号可在「个人中心 → 匹配」中查看</p>
+          )}
           <p className="text-[11px] text-text-muted mt-3">🔒 微信号仅双方可见，加密存储</p>
         </motion.div>
 

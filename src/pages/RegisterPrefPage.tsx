@@ -6,11 +6,18 @@ interface Props { gender: 'male'|'female'; onComplete: (p: { prefGender: 'male'|
 
 export default function RegisterPrefPage({ gender, onComplete }: Props) {
   const [pg, setPg] = useState<'male'|'female'>(gender === 'male' ? 'female' : 'male');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    await onComplete({ prefGender: pg, prefBaseCities: [] });
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
       <motion.div className="w-full max-w-xl" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="glass rounded-3xl p-6">
+        <div className="glass rounded-2xl p-6">
           <div className="w-10 h-10 rounded-2xl bg-primary-soft flex items-center justify-center mb-5">
             <Heart className="w-5 h-5 text-primary" />
           </div>
@@ -30,10 +37,11 @@ export default function RegisterPrefPage({ gender, onComplete }: Props) {
         </div>
 
         <motion.button
-          onClick={() => onComplete({ prefGender: pg, prefBaseCities: [] })}
-          className="w-full mt-4 py-3.5 rounded-2xl btn-primary text-base flex items-center justify-center gap-2"
+          onClick={handleSubmit}
+          disabled={loading}
+          className="w-full mt-4 py-3.5 rounded-2xl btn-primary text-base flex items-center justify-center gap-2 disabled:opacity-50"
           whileTap={{ scale: 0.97 }}>
-          开始探索 <ArrowRight className="w-4 h-4" />
+          {loading ? '注册中...' : <>开始探索 <ArrowRight className="w-4 h-4" /></>}
         </motion.button>
       </motion.div>
     </div>

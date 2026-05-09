@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>非鹅勿扰 — 有质感的配色方案</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Plus Jakarta Sans", -apple-system, "PingFang SC", sans-serif; }
+  .scheme { min-height: 100vh; padding: 48px 32px; display: flex; flex-direction: column; }
+  .scheme-header { margin-bottom: 32px; }
+  .scheme-header h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .scheme-header .desc { font-size: 13px; opacity: 0.6; }
+  .hero { flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: 480px; }
+  .hero h1 { font-size: 36px; font-weight: 800; line-height: 1.2; margin-bottom: 12px; }
+  .hero .sub { font-size: 15px; opacity: 0.55; margin-bottom: 32px; line-height: 1.6; }
+  .btn-row { display: flex; gap: 12px; margin-bottom: 20px; }
+  .btn { padding: 14px 28px; border-radius: 12px; font-weight: 600; font-size: 15px; border: none; cursor: pointer; }
+  .btn-s { padding: 14px 28px; border-radius: 12px; font-weight: 500; font-size: 15px; cursor: pointer; }
+  .card { border-radius: 16px; padding: 24px; margin-top: 24px; }
+  .tag { display: inline-block; padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 500; margin-right: 8px; margin-bottom: 8px; }
+  .divider { height: 2px; background: rgba(0,0,0,0.04); }
+</style>
+</head>
+<body>
+
+<!-- F: 微纹理纸张底 + 墨紫按钮 -->
+<div class="scheme" style="background: #F0ECE6 url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%224%22 height=%224%22><rect width=%224%22 height=%224%22 fill=%22%23F0ECE6%22/><rect width=%221%22 height=%221%22 fill=%22%23EAE6DF%22 opacity=%220.5%22/></svg>'); background-size: 4px 4px;">
+  <div class="scheme-header">
+    <h2 style="color: #2B2640;">F · 纸张纹理 + 墨紫</h2>
+    <p class="desc" style="color: #2B2640;">像手写信一样，有纸张的温度和墨水的深度</p>
+  </div>
+  <div class="hero">
+    <h1 style="color: #2B2640;">不看脸，<br><span style="color: #5B4FA0;">只听心。</span></h1>
+    <p class="sub" style="color: #6E6680;">每天一盏灯，照亮对的人。腾讯人专属的灵魂交友空间。</p>
+    <div class="btn-row">
+      <button class="btn" style="background: #2B2640; color: #F0ECE6; box-shadow: 0 2px 8px rgba(43,38,64,0.15);">我是鹅厂人</button>
+      <button class="btn-s" style="background: transparent; border: 1.5px solid #2B264030; color: #5B5470;">暂时不是</button>
+    </div>
+    <div>
+      <span class="tag" style="background: #E6E1DA; color: #5B4FA0;">破冰</span>
+      <span class="tag" style="background: #E6E1DA; color: #7A6E5C;">深入了解</span>
+      <span class="tag" style="background: #E6E1DA; color: #8C7A68;">灵魂触碰</span>
+    </div>
+    <div class="card" style="background: #FAF8F4; border: 1px solid #DDD8D0;">
+      <p style="font-size: 13px; color: #6E6680; margin-bottom: 8px;">TA 的微信号</p>
+      <p style="font-size: 20px; font-weight: 700; color: #2B2640;">soul_mate_2026</p>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- G: 柔和渐变底（非紫色）+ 白按钮反转 -->
+<div class="scheme" style="background: linear-gradient(170deg, #FFF5EE 0%, #F5EDE6 50%, #EDE5DF 100%);">
+  <div class="scheme-header">
+    <h2 style="color: #3A2D24;">G · 暖奶渐变 + 深棕</h2>
+    <p class="desc" style="color: #3A2D24;">渐变但不是紫色，像晨光洒在咖啡上</p>
+  </div>
+  <div class="hero">
+    <h1 style="color: #3A2D24;">不看脸，<br><span style="color: #B8654A;">只听心。</span></h1>
+    <p class="sub" style="color: #8A7A6E;">每天一盏灯，照亮对的人。腾讯人专属的灵魂交友空间。</p>
+    <div class="btn-row">
+      <button class="btn" style="background: #3A2D24; color: #FFF5EE; box-shadow: 0 2px 8px rgba(58,45,36,0.15);">我是鹅厂人</button>
+      <button class="btn-s" style="background: rgba(255,255,255,0.6); border: 1px solid #DDD5CC; color: #6B5E52;">暂时不是</button>
+    </div>
+    <div>
+      <span class="tag" style="background: rgba(184,101,74,0.1); color: #B8654A;">破冰</span>
+      <span class="tag" style="background: rgba(166,124,91,0.1); color: #A67C5B;">深入了解</span>
+      <span class="tag" style="background: rgba(140,115,90,0.08); color: #8C7360;">灵魂触碰</span>
+    </div>
+    <div class="card" style="background: rgba(255,255,255,0.7); border: 1px solid #E0D8CF;">
+      <p style="font-size: 13px; color: #8A7A6E; margin-bottom: 8px;">TA 的微信号</p>
+      <p style="font-size: 20px; font-weight: 700; color: #3A2D24;">soul_mate_2026</p>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- H: 深底色反转（高级感） -->
+<div class="scheme" style="background: #1C1926;">
+  <div class="scheme-header">
+    <h2 style="color: #F0EDE8;">H · 深夜模式 + 暖金</h2>
+    <p class="desc" style="color: #F0EDE8;">夜晚约会的氛围，灯光是最亮的元素</p>
+  </div>
+  <div class="hero">
+    <h1 style="color: #F0EDE8;">不看脸，<br><span style="color: #E8B86D;">只听心。</span></h1>
+    <p class="sub" style="color: #8A8698;">每天一盏灯，照亮对的人。腾讯人专属的灵魂交友空间。</p>
+    <div class="btn-row">
+      <button class="btn" style="background: #E8B86D; color: #1C1926; box-shadow: 0 2px 12px rgba(232,184,109,0.2);">我是鹅厂人</button>
+      <button class="btn-s" style="background: transparent; border: 1.5px solid #3A3648; color: #8A8698;">暂时不是</button>
+    </div>
+    <div>
+      <span class="tag" style="background: rgba(232,184,109,0.1); color: #E8B86D;">破冰</span>
+      <span class="tag" style="background: rgba(232,184,109,0.06); color: #C4A060;">深入了解</span>
+      <span class="tag" style="background: rgba(200,160,100,0.06); color: #A89070;">灵魂触碰</span>
+    </div>
+    <div class="card" style="background: #252230; border: 1px solid #3A3648;">
+      <p style="font-size: 13px; color: #8A8698; margin-bottom: 8px;">TA 的微信号</p>
+      <p style="font-size: 20px; font-weight: 700; color: #F0EDE8;">soul_mate_2026</p>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- I: 浅薰衣草渐变（C的升级版，加纹理和层次） -->
+<div class="scheme" style="background: linear-gradient(170deg, #F8F5FF 0%, #F0ECF8 40%, #EAE4F2 100%);">
+  <div class="scheme-header">
+    <h2 style="color: #1E1833;">I · 薰衣草渐变 + 深紫（C升级版）</h2>
+    <p class="desc" style="color: #1E1833;">保留紫色灵魂感，但更柔和有层次</p>
+  </div>
+  <div class="hero">
+    <h1 style="color: #1E1833;">不看脸，<br><span style="color: #6B5CE7;">只听心。</span></h1>
+    <p class="sub" style="color: #6E6494;">每天一盏灯，照亮对的人。腾讯人专属的灵魂交友空间。</p>
+    <div class="btn-row">
+      <button class="btn" style="background: #1E1833; color: #F0ECF8; box-shadow: 0 2px 8px rgba(30,24,51,0.15);">我是鹅厂人</button>
+      <button class="btn-s" style="background: rgba(255,255,255,0.5); border: 1px solid #DBD4EA; color: #5C5480;">暂时不是</button>
+    </div>
+    <div>
+      <span class="tag" style="background: rgba(107,92,231,0.08); color: #6B5CE7;">破冰</span>
+      <span class="tag" style="background: rgba(180,160,220,0.1); color: #7A6AAA;">深入了解</span>
+      <span class="tag" style="background: rgba(140,120,180,0.08); color: #8A76B5;">灵魂触碰</span>
+    </div>
+    <div class="card" style="background: rgba(255,255,255,0.6); border: 1px solid #DBD4EA;">
+      <p style="font-size: 13px; color: #6E6494; margin-bottom: 8px;">TA 的微信号</p>
+      <p style="font-size: 20px; font-weight: 700; color: #1E1833;">soul_mate_2026</p>
+    </div>
+  </div>
+</div>
+
+<p style="text-align: center; padding: 32px; color: #999; font-size: 12px; background: #F5F5F5;">
+  C 已保留 · 新增 F / G / H / I · 告诉我选哪个
+</p>
+</body>
+</html>

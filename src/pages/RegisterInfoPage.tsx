@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Check } from 'lucide-react';
 import { BASE_CITIES, AVATAR_COLORS } from '../data/questions';
 
-interface Props { onComplete: (d: { email: string; nickname: string; password: string; gender: 'male'|'female'; baseCity: string; wechatId: string; avatarColor: string }) => void; }
+interface Props { onComplete: (d: { nickname: string; password: string; gender: 'male'|'female'; baseCity: string; wechatId: string; avatarColor: string }) => void; }
 
 export default function RegisterInfoPage({ onComplete }: Props) {
   const [step, setStep] = useState(0);
@@ -16,12 +16,12 @@ export default function RegisterInfoPage({ onComplete }: Props) {
   const [error, setError] = useState('');
 
   const steps = [
-    { t: '你的昵称', s: '2-8个字符，这将是你的专属名字' },
-    { t: '设置密码', s: '下次登录时使用，至少6位' },
-    { t: '性别', s: '选择后不可修改' },
-    { t: '工作城市', s: '选择你目前的 Base 地' },
-    { t: '微信号', s: '仅在双向匹配成功后对对方可见，加密存储' },
-    { t: '头像颜色', s: '你的专属标识' },
+    { t: '你的昵称', s: '2-8个字符，其他用户只能看到你的昵称', privacy: '' },
+    { t: '设置密码', s: '下次登录时使用，至少6位', privacy: '🔒 密码仅存储在你的设备上' },
+    { t: '性别', s: '用于匹配推荐，选择后不可修改', privacy: '' },
+    { t: '工作城市', s: '同城嘉宾优先推荐，可在个人中心修改', privacy: '' },
+    { t: '微信号', s: '仅在双向匹配成功后对匹配对象可见', privacy: '🔒 加密存储，管理员不可见，可在个人中心修改' },
+    { t: '头像颜色', s: '你的专属标识', privacy: '' },
   ];
 
   const validate = () => {
@@ -37,7 +37,7 @@ export default function RegisterInfoPage({ onComplete }: Props) {
   const next = () => {
     if (!validate()) return;
     if (step < steps.length - 1) setStep(step + 1);
-    else onComplete({ email: 'demo@tencent.com', nickname: nickname.trim(), password, gender: gender!, baseCity, wechatId: wechatId.trim(), avatarColor });
+    else onComplete({ nickname: nickname.trim(), password, gender: gender!, baseCity, wechatId: wechatId.trim(), avatarColor });
   };
 
   const avatarLetter = nickname.trim()
@@ -47,7 +47,7 @@ export default function RegisterInfoPage({ onComplete }: Props) {
   return (
     <div className="min-h-screen flex flex-col">
       <div className="px-6 pt-6">
-        <div className="w-full h-1.5 rounded-full bg-white/30 overflow-hidden">
+        <div className="w-full h-1.5 rounded-full bg-surface-alt overflow-hidden">
           <motion.div className="h-full rounded-full bg-gradient-to-r from-primary-light to-primary" animate={{ width: `${((step + 1) / steps.length) * 100}%` }} />
         </div>
         <p className="text-xs text-text-muted mt-2 text-right">{step + 1}/{steps.length}</p>
@@ -56,9 +56,12 @@ export default function RegisterInfoPage({ onComplete }: Props) {
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-28">
         <AnimatePresence mode="wait">
           <motion.div key={step} className="w-full max-w-xl" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.25 }}>
-            <div className="glass rounded-3xl p-6">
+            <div className="glass rounded-2xl p-6">
               <h2 className="text-lg font-medium text-text mb-1">{steps[step].t}</h2>
-              <p className="text-sm text-text-secondary mb-6">{steps[step].s}</p>
+              <p className="text-sm text-text-secondary mb-4">{steps[step].s}</p>
+              {steps[step].privacy && (
+                <p className="text-xs text-text-muted mb-4">{steps[step].privacy}</p>
+              )}
 
               {/* Step 0: Nickname */}
               {step === 0 && (
@@ -134,7 +137,7 @@ export default function RegisterInfoPage({ onComplete }: Props) {
         </AnimatePresence>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-bg-start/80 via-bg-start/40 to-transparent backdrop-blur-sm">
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#EAE4F2] via-[#EAE4F2/95] to-transparent">
         <div className="max-w-xl mx-auto flex gap-3">
           {step > 0 && (
             <motion.button onClick={() => setStep(step - 1)} className="w-12 h-12 rounded-2xl btn-glass flex items-center justify-center" whileTap={{ scale: 0.95 }}>

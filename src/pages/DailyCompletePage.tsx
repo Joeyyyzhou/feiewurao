@@ -40,7 +40,7 @@ export default function DailyCompletePage({ onGoProfile, hasViewedGuests, onView
         <p className="text-text-secondary mb-8">明天会有新的问题和新的嘉宾，期待下一次心动 ✨</p>
 
         {/* Countdown */}
-        <div className="glass rounded-3xl p-6 mb-8 inline-block">
+        <div className="glass rounded-2xl p-6 mb-8 inline-block">
           <p className="text-xs text-text-muted mb-3">距离新问题刷新还有</p>
           <div className="flex items-center justify-center gap-2">
             <div className="flex flex-col items-center">

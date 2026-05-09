@@ -14,8 +14,16 @@ export default function VerifyPage({ phase, onSendCode, onVerifyCode }: Props) {
   const [sending, setSending] = useState(false);
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [verifying, setVerifying] = useState(false);
-  const [countdown, setCountdown] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // 从 localStorage 恢复倒计时状态（防止刷新绕过）
+  const getRestoredCountdown = () => {
+    const saved = localStorage.getItem('fewr_code_cooldown');
+    if (!saved) return 0;
+    const remaining = Math.ceil((parseInt(saved, 10) - Date.now()) / 1000);
+    return remaining > 0 ? remaining : 0;
+  };
+  const [countdown, setCountdown] = useState(getRestoredCountdown);
 
   // Countdown timer for resend
   useEffect(() => {
@@ -24,28 +32,36 @@ export default function VerifyPage({ phase, onSendCode, onVerifyCode }: Props) {
     return () => clearTimeout(t);
   }, [countdown]);
 
+  const startCooldown = (seconds: number = 60) => {
+    setCountdown(seconds);
+    localStorage.setItem('fewr_code_cooldown', String(Date.now() + seconds * 1000));
+  };
+
   const handleSend = async () => {
     const t = email.trim().toLowerCase();
     if (!t) { setError('请输入邮箱'); return; }
-    if (!t.endsWith('@tencent.com')) { setError('请输入 @tencent.com 邮箱'); return; }
+    // 严格校验：必须是 xxx@tencent.com 格式，@前至少1个合法字符
+    const tencentEmailRegex = /^[a-zA-Z0-9._%+-]+@tencent\.com$/;
+    if (!tencentEmailRegex.test(t)) { setError('请输入有效的 @tencent.com 邮箱'); return; }
     setError('');
     setSending(true);
+    // 立即启动倒计时防止连点
+    startCooldown(60);
     const res = await onSendCode(t);
     setSending(false);
     if (!res.success) {
       setError(res.error || '发送失败，请重试');
-    } else {
-      setCountdown(60);
+      // 如果后端返回了 cooldown 信息，不清除倒计时
     }
   };
 
   const handleResend = async () => {
-    if (countdown > 0) return;
+    if (countdown > 0 || sending) return;
     setSending(true);
+    startCooldown(60);
     const res = await onSendCode(email.trim().toLowerCase());
     setSending(false);
     if (res.success) {
-      setCountdown(60);
       setCode(['', '', '', '', '', '']);
       setError('');
     } else {
@@ -107,12 +123,12 @@ export default function VerifyPage({ phase, onSendCode, onVerifyCode }: Props) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 md:px-12">
       <AnimatePresence mode="wait">
         {phase === 'verify' ? (
-          <motion.div key="input" className="w-full max-w-xl" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <div className="glass rounded-3xl p-7">
-              <div className="w-11 h-11 rounded-2xl bg-primary-soft flex items-center justify-center mb-5">
+          <motion.div key="input" className="w-full max-w-md" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <div className="card rounded-2xl p-7">
+              <div className="w-10 h-10 rounded-xl bg-primary-soft flex items-center justify-center mb-5">
                 <Mail className="w-5 h-5 text-primary" />
               </div>
               <h2 className="text-xl font-bold text-text mb-1">验证身份</h2>
@@ -121,17 +137,17 @@ export default function VerifyPage({ phase, onSendCode, onVerifyCode }: Props) {
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="name@tencent.com" autoFocus
                 className="w-full px-4 py-3.5 rounded-2xl input-glass text-base" />
               {error && <motion.p className="text-danger text-xs mt-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{error}</motion.p>}
-              <motion.button onClick={handleSend} disabled={sending}
+              <motion.button onClick={handleSend} disabled={sending || countdown > 0}
                 className="w-full mt-4 py-3.5 rounded-2xl btn-primary text-base flex items-center justify-center gap-2 disabled:opacity-50"
                 whileTap={{ scale: 0.97 }}>
-                {sending ? '发送中...' : <>发送验证码 <ArrowRight className="w-4 h-4" /></>}
+                {sending ? '发送中...' : countdown > 0 ? `${countdown}s 后可重新发送` : <>发送验证码 <ArrowRight className="w-4 h-4" /></>}
               </motion.button>
             </div>
           </motion.div>
         ) : (
-          <motion.div key="code" className="w-full max-w-xl" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="glass rounded-3xl p-7">
-              <div className="w-11 h-11 rounded-2xl bg-primary-soft flex items-center justify-center mb-5">
+          <motion.div key="code" className="w-full max-w-md" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="card rounded-2xl p-7">
+              <div className="w-10 h-10 rounded-xl bg-primary-soft flex items-center justify-center mb-5">
                 <KeyRound className="w-5 h-5 text-primary" />
               </div>
               <h2 className="text-xl font-bold text-text mb-1">输入验证码</h2>

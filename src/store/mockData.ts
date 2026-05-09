@@ -14,6 +14,8 @@ export interface UserProfile {
   prefBaseCities: string[];
   createdAt: string;
   dayCount: number;
+  lastCheckInDate?: string;
+  lastCompletedDate?: string; // 今天是否已完成答题（YYYY-MM-DD）
 }
 
 export interface Answer {
@@ -33,7 +35,7 @@ export interface GuestCard {
 
 export interface LightRecord {
   id: string;
-  fromUser: { nickname: string; avatarColor: string; answers: { questionId: number; content: string }[] };
+  fromUser: { id: string; nickname: string; avatarColor: string; answers: { questionId: number; content: string }[] };
   status: 'pending' | 'matched' | 'ignored' | 'expired';
   createdAt: string;
   expiresAt: string;
@@ -41,6 +43,7 @@ export interface LightRecord {
 
 export interface MatchRecord {
   id: string;
+  userId?: string;
   user: { nickname: string; avatarColor: string };
   wechatId: string;
   matchedAt: string;
@@ -57,9 +60,11 @@ export type AppPhase =
   | 'register-pref'
   | 'welcome'
   | 'login'
+  | 'check-in'
   | 'daily-questions'
   | 'daily-guests'
   | 'daily-complete'
+  | 'light-sent'
   | 'match-success'
   | 'profile'
   | 'notifications'
@@ -233,31 +238,40 @@ export function generateMockMatches(): MatchRecord[] {
   ];
 }
 
-export function getTodayQuestions(answeredIds: number[]): Question[] {
-  const unanswered = questions.filter(q => !answeredIds.includes(q.id));
+/**
+ * 根据用户的 dayCount（第几天）选出当天的4道题。
+ * 
+ * 核心规则：
+ * - 所有人的「第1天」回答同一组4题，「第2天」同一组4题，以此类推
+ * - 不管什么时候注册，第N天的题目是固定的
+ * - 每个分类各1题，dayIndex 做确定性偏移
+ * - 52题用完后循环
+ */
+export function getTodayQuestions(_answeredIds: number[], dayCount: number = 1): Question[] {
+  return getQuestionsForDay(dayCount);
+}
+
+/**
+ * 根据第几天返回固定的4道题。
+ * dayCount=1 是所有人注册后的第一天。
+ */
+export function getQuestionsForDay(dayCount: number): Question[] {
+  const dayIndex = Math.max(0, dayCount - 1); // dayCount 1-based → 0-based index
   
-  if (unanswered.length >= 4) {
-    // Try to get one from each category
-    const categories: Array<Question['category']> = ['shallow', 'medium', 'deep', 'life'];
-    const selected: Question[] = [];
-    
-    for (const cat of categories) {
-      const pool = unanswered.filter(q => q.category === cat && !selected.includes(q));
-      if (pool.length > 0) {
-        selected.push(pool[randomBetween(0, pool.length - 1)]);
-      }
-    }
-    
-    // Fill remaining slots
-    while (selected.length < 4) {
-      const remaining = unanswered.filter(q => !selected.includes(q));
-      if (remaining.length === 0) break;
-      selected.push(remaining[randomBetween(0, remaining.length - 1)]);
-    }
-    
-    return selected;
+  const categories: Array<Question['category']> = ['shallow', 'medium', 'deep', 'life'];
+  const pools: Record<string, Question[]> = {};
+  for (const cat of categories) {
+    pools[cat] = questions.filter(q => q.category === cat);
   }
   
-  // All answered, pick random 4
-  return pickRandom(questions, 4);
+  const selected: Question[] = [];
+  for (const cat of categories) {
+    const pool = pools[cat];
+    if (pool.length > 0) {
+      const idx = dayIndex % pool.length;
+      selected.push(pool[idx]);
+    }
+  }
+  
+  return selected;
 }

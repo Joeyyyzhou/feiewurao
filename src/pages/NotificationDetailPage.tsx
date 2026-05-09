@@ -12,7 +12,7 @@ export default function NotificationDetailPage({ notification, onRespond, onBack
 
   return (
     <div className="min-h-screen">
-      <div className="sticky top-0 z-20 backdrop-blur-lg bg-bg-start/60 border-b border-border-subtle">
+      <div className="sticky top-0 z-20 bg-bg/95 border-b border-border-subtle">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
           <button onClick={onBack} className="p-1.5 -ml-1.5 rounded-xl hover:bg-white/20 transition-colors"><ArrowLeft className="w-5 h-5 text-text" /></button>
           <span className="font-semibold text-text">有人对你留灯了 💡</span>
@@ -38,7 +38,7 @@ export default function NotificationDetailPage({ notification, onRespond, onBack
           ); })}
         </div>
       </div>
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-bg-start/80 to-transparent backdrop-blur-sm">
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#EAE4F2] via-[#EAE4F2/95] to-transparent">
         <div className="max-w-4xl mx-auto flex gap-3">
           <motion.button onClick={() => onRespond(notification.id, false)}
             className="flex-1 py-3.5 rounded-2xl btn-glass font-medium flex items-center justify-center gap-1.5" whileTap={{ scale: 0.97 }}><X className="w-4 h-4" /> 忽略</motion.button>

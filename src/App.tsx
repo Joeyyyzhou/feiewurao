@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAppState } from './store/useAppState';
 import { Avatar } from './components/Avatar';
@@ -11,6 +11,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterInfoPage from './pages/RegisterInfoPage';
 import RegisterPrefPage from './pages/RegisterPrefPage';
 import WelcomePage from './pages/WelcomePage';
+import CheckInPage from './pages/CheckInPage';
 import DailyQuestionsPage from './pages/DailyQuestionsPage';
 import DailyCompletePage from './pages/DailyCompletePage';
 import GuestShowPage from './pages/GuestShowPage';
@@ -23,7 +24,7 @@ function App() {
     state, setPhase, sendCode, verifyCode, registerUser, login, setPreferences,
     submitAnswer, finishAnswering, updateGuestLight, finalizeLight,
     goToProfile, goToNotifications, viewNotification, respondToLight,
-    welcomeDone, startNewDay, goToDailyComplete, deleteAccount, logout,
+    checkInDone, welcomeDone, startNewDay, goToDailyComplete, updateProfile, deleteAccount, logout,
   } = useAppState();
 
   const [pv, setPv] = useState(0);
@@ -32,7 +33,7 @@ function App() {
     recordPV().then(setPv).catch(console.error);
   }, []);
 
-  const showProfileBtn = state.user && !['landing', 'sorry', 'onboarding', 'verify', 'verify-sent', 'register-info', 'register-pref', 'welcome', 'login'].includes(state.phase);
+  const showProfileBtn = state.user && !['landing', 'sorry', 'onboarding', 'verify', 'verify-sent', 'register-info', 'register-pref', 'welcome', 'login', 'check-in'].includes(state.phase);
 
   return (
     <div className="relative">
@@ -79,6 +80,15 @@ function App() {
           {state.phase === 'welcome' && state.user && (
             <WelcomePage orderNum={state.userOrderNum} nickname={state.user.nickname} onContinue={welcomeDone} />
           )}
+          {state.phase === 'check-in' && state.user && (
+            <CheckInPage
+              nickname={state.user.nickname}
+              avatarColor={state.user.avatarColor}
+              dayCount={state.user.dayCount}
+              pendingLights={state.lightNotifications.filter(n => n.status === 'pending').length}
+              onContinue={checkInDone}
+            />
+          )}
           {state.phase === 'daily-questions' && state.todayAnswers.size >= 4 && (
             <div className="min-h-screen flex flex-col items-center justify-center px-6">
               <motion.div className="text-center max-w-xl" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -99,7 +109,34 @@ function App() {
           )}
           {state.phase === 'daily-guests' && (
             <GuestShowPage guests={state.guests} questionIds={state.todayQuestions.map(q => q.id)}
+              userId={state.user?.id}
               onUpdateLight={updateGuestLight} onFinalizeLight={finalizeLight} onGiveUp={goToDailyComplete} />
+          )}
+          {state.phase === 'light-sent' && state.lastMatchedGuest && (
+            <div className="min-h-screen flex flex-col items-center justify-center px-6">
+              <motion.div className="text-center max-w-xl" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <div className="text-5xl mb-6 select-none">💡✨</div>
+                <h2 className="text-2xl font-bold text-text mb-3">已为 {state.lastMatchedGuest.nickname} 留灯</h2>
+                <p className="text-text-secondary mb-3">
+                  TA 下次登录时会收到通知，可以查看你的回答后决定是否也为你留灯。
+                </p>
+                <p className="text-sm text-text-muted mb-10">
+                  留灯有效期 7 天。如果双向留灯，你们将互相看到对方的微信号 💜
+                </p>
+                <div className="flex flex-col gap-3 items-center">
+                  <motion.button onClick={goToDailyComplete}
+                    className="w-64 py-3.5 rounded-xl btn-primary text-base"
+                    whileTap={{ scale: 0.97 }}>
+                    好的，期待回应 ✨
+                  </motion.button>
+                  <motion.button onClick={goToProfile}
+                    className="w-64 py-3.5 rounded-xl btn-glass text-sm"
+                    whileTap={{ scale: 0.97 }}>
+                    去个人中心
+                  </motion.button>
+                </div>
+              </motion.div>
+            </div>
           )}
           {state.phase === 'match-success' && (
             <MatchSuccessPage guest={state.lastMatchedGuest} onContinue={goToDailyComplete} onGoHome={goToProfile} />
@@ -113,7 +150,8 @@ function App() {
           )}
           {state.phase === 'profile' && state.user && (
             <ProfilePage user={state.user} answers={state.answers} lightNotifications={state.lightNotifications}
-              matches={state.matches} onBack={startNewDay} onViewNotification={viewNotification} onDeleteAccount={deleteAccount} onLogout={logout} />
+              matches={state.matches} onBack={startNewDay} onViewNotification={viewNotification}
+              onDeleteAccount={deleteAccount} onLogout={logout} onUpdateProfile={updateProfile} />
           )}
           {state.phase === 'notification-detail' && state.selectedNotification && (
             <NotificationDetailPage notification={state.selectedNotification}
