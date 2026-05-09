@@ -513,22 +513,9 @@ export function useAppState() {
 
   const startNewDay = useCallback(() => {
     setState(prev => {
-      // todayCompleted 已从数据库同步
-      if (prev.todayCompleted) {
-        return { ...prev, phase: 'daily-complete' };
-      }
-      
-      const answeredIds = prev.answers.map(a => a.questionId);
-      const todayQuestions = getTodayQuestions(answeredIds, prev.user?.dayCount || 1);
-      return {
-        ...prev,
-        todayQuestions,
-        todayAnswers: new Map(),
-        todayCompleted: false,
-        guests: [],
-        lastMatchedGuest: null,
-        phase: 'daily-questions',
-      };
+      // 始终回到 check-in（首页/今日 双 tab），由用户从 check-in 主动"开始"
+      // 这样首页 tab 作为常驻入口可被访问
+      return { ...prev, phase: 'check-in' as AppPhase };
     });
   }, []);
 
