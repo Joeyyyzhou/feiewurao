@@ -5,6 +5,27 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY
 );
 
+function calcStreak(answeredDates, todayStr) {
+  if (!answeredDates || answeredDates.size === 0) return 0;
+  const today = new Date(todayStr + 'T00:00:00');
+  let cursor = new Date(today);
+  let streak = 0;
+  const answeredToday = answeredDates.has(todayStr);
+  if (!answeredToday) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  while (true) {
+    const key = cursor.toISOString().split('T')[0];
+    if (answeredDates.has(key)) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -50,11 +71,13 @@ export default async function handler(req, res) {
     const pastActiveDays = answeredDates.size;
     const answeredToday = answeredDates.has(today);
     const dayCount = Math.max(1, answeredToday ? pastActiveDays : pastActiveDays + 1);
+    const streak = calcStreak(answeredDates, today);
 
     return res.status(200).json({
       success: true,
       userId: user.id,
       dayCount,
+      streak,
       createdAt: user.created_at,
       todayAnswerCount: todayAnswers?.length || 0,
       answeredQuestionIds,

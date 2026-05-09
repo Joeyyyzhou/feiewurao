@@ -594,6 +594,7 @@ export async function getBlockedUserIds(userId: string): Promise<string[]> {
 export async function syncUserState(_userId: string, email?: string): Promise<{
   dbUserId: string;
   dayCount: number;
+  streak: number;
   todayAnsweredCount: number;
   createdAt: string;
   answeredQuestionIds: number[];
@@ -610,6 +611,7 @@ export async function syncUserState(_userId: string, email?: string): Promise<{
     return {
       dbUserId: data.userId,
       dayCount: data.dayCount,
+      streak: data.streak || 0,
       todayAnsweredCount: data.todayAnswerCount,
       createdAt: data.createdAt,
       answeredQuestionIds: data.answeredQuestionIds || [],

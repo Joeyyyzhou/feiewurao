@@ -14,6 +14,7 @@ export interface UserProfile {
   prefBaseCities: string[];
   createdAt: string;
   dayCount: number;
+  streak?: number; // 连续登录/答题天数
   lastCheckInDate?: string;
   lastCompletedDate?: string; // 今天是否已完成答题（YYYY-MM-DD）
 }

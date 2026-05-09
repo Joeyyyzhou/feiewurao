@@ -87,6 +87,7 @@ function App() {
               nickname={state.user.nickname}
               avatarColor={state.user.avatarColor}
               dayCount={state.user.dayCount}
+              streak={state.user.streak || 0}
               pendingLights={state.lightNotifications.filter(n => n.status === 'pending').length}
               onContinue={checkInDone}
             />

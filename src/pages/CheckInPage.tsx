@@ -8,6 +8,7 @@ interface Props {
   nickname: string;
   avatarColor: string;
   dayCount: number;
+  streak: number;
   pendingLights: number;
   onContinue: () => void;
 }
@@ -42,7 +43,7 @@ function getDailyQuote(dayCount: number): string {
   return quotes[(Math.max(1, dayCount) - 1) % quotes.length];
 }
 
-export default function CheckInPage({ nickname, avatarColor, dayCount, pendingLights, onContinue }: Props) {
+export default function CheckInPage({ nickname, avatarColor, dayCount, streak, pendingLights, onContinue }: Props) {
   const [tab, setTab] = useState<Tab>('today');
   const [showQuote, setShowQuote] = useState(false);
   const greeting = getGreeting();
@@ -130,7 +131,7 @@ export default function CheckInPage({ nickname, avatarColor, dayCount, pendingLi
                 欢迎回来，<span className="italic text-accent">{nickname}</span>
               </motion.h1>
 
-              {/* 在非鹅勿扰的第 N 天（注册至今自然日） */}
+              {/* 连续登录 N 天 */}
               <motion.div
                 className="card p-7 mt-9"
                 initial={{ opacity: 0, y: 20 }}
@@ -139,7 +140,9 @@ export default function CheckInPage({ nickname, avatarColor, dayCount, pendingLi
               >
                 <div className="flex items-center justify-center gap-2 mb-4">
                   <Sparkles className="w-3.5 h-3.5 text-accent" />
-                  <span className="font-meta text-[11px] text-text-muted tracking-[0.22em] uppercase">在非鹅勿扰的第</span>
+                  <span className="font-meta text-[11px] text-text-muted tracking-[0.22em] uppercase">
+                    {streak > 0 ? '已连续答题' : '今天开始'}
+                  </span>
                 </div>
                 <div className="flex items-baseline justify-center gap-2">
                   <motion.span
@@ -147,14 +150,16 @@ export default function CheckInPage({ nickname, avatarColor, dayCount, pendingLi
                     initial={{ scale: 0.5, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.7 }}
-                    key={dayCount}
+                    key={streak}
                   >
-                    {dayCount || 1}
+                    {streak}
                   </motion.span>
                   <span className="font-cn text-base text-text-secondary">天</span>
                 </div>
                 <p className="font-meta text-[10px] text-text-muted mt-2 tracking-[0.12em]">
-                  自你加入起算的第 {dayCount || 1} 天
+                  {streak > 0
+                    ? `累计活跃 ${dayCount} 天 · 今日答题即可 +1`
+                    : `累计活跃 ${dayCount} 天 · 今天答题就重启连续记录`}
                 </p>
 
                 {/* 每日一句 */}

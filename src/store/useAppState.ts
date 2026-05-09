@@ -177,6 +177,7 @@ export function useAppState() {
             ...prev.user,
             id: dbUserId,
             dayCount: result.dayCount,
+            streak: result.streak,
             createdAt: result.createdAt,
             lastCheckInDate: today,
           } : null,
@@ -273,6 +274,7 @@ export function useAppState() {
         prefBaseCities: u.prefBaseCities,
         createdAt: u.createdAt,
         dayCount: u.dayCount,
+        streak: u.streak ?? 0,
         lastCheckInDate: new Date().toISOString().split('T')[0],
       };
 

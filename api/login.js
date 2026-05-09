@@ -6,6 +6,34 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY
 );
 
+/**
+ * 连续登录天数：从今天或昨天起，往回连续有答题记录的日期数
+ * - 今天已答题：从今天往回数
+ * - 今天没答题：从昨天往回数（允许今天还没来得及答）
+ * - 昨天也没答：streak = 0（断了）
+ */
+function calcStreak(answeredDates, todayStr) {
+  if (!answeredDates || answeredDates.size === 0) return 0;
+  const today = new Date(todayStr + 'T00:00:00');
+  let cursor = new Date(today);
+  let streak = 0;
+  const answeredToday = answeredDates.has(todayStr);
+  if (!answeredToday) {
+    // 今天没答：从昨天起数
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  while (true) {
+    const key = cursor.toISOString().split('T')[0];
+    if (answeredDates.has(key)) {
+      streak++;
+      cursor.setDate(cursor.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -61,6 +89,10 @@ export default async function handler(req, res) {
     const answeredToday = answeredDates.has(today);
     const dayCount = Math.max(1, answeredToday ? pastActiveDays : pastActiveDays + 1);
 
+    // === 连续登录天数：从今天（或昨天）往前数连续有答题记录的天数 ===
+    // 今天没答题也可以算，以昨天为起点；昨天没答就断
+    const streak = calcStreak(answeredDates, today);
+
     return res.status(200).json({
       success: true,
       user: {
@@ -76,6 +108,7 @@ export default async function handler(req, res) {
         prefBaseCities: u.pref_base_cities || [],
         createdAt: u.created_at,
         dayCount,
+        streak,
         orderNum: u.order_num,
       },
       answers: (answers || []).map(a => ({
