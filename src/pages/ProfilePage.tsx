@@ -72,7 +72,7 @@ export default function ProfilePage({ user, answers, lightNotifications, matches
         <div className="glass rounded-2xl p-5 flex items-center gap-4">
           <Avatar nickname={user.nickname} color={user.avatarColor} size={52} />
           <div><h2 className="text-lg font-bold text-text">{user.nickname}</h2>
-            <p className="text-xs text-text-secondary mt-0.5">{user.gender === 'male' ? '男' : '女'} · {user.baseCity} · 第{user.dayCount}天</p>
+            <p className="text-xs text-text-secondary mt-0.5">{user.gender === 'male' ? '男' : '女'} · {user.baseCity} · 加入 {user.dayCount} 天</p>
           </div>
         </div>
       </div>

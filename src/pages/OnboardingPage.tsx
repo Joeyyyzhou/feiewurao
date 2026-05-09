@@ -5,16 +5,18 @@ import { ArrowRight, ArrowLeft } from 'lucide-react';
 interface Props {
   onComplete: () => void;
   viewMode?: boolean; // true 表示已登录用户在查看（顶部改"返回"、末尾按钮改"知道了"）
+  embedded?: boolean; // true 表示嵌入在外部容器（如首页 tab），隐藏独立 header
 }
 
-export default function OnboardingPage({ onComplete, viewMode = false }: Props) {
+export default function OnboardingPage({ onComplete, viewMode = false, embedded = false }: Props) {
   const [idx, setIdx] = useState(0);
   const isLast = idx === slides.length - 1;
   const slide = slides[idx];
 
   return (
-    <div className="min-h-screen flex flex-col relative">
+    <div className={`${embedded ? 'min-h-[calc(100vh-60px)]' : 'min-h-screen'} flex flex-col relative`}>
       {/* Header / Progress */}
+      {!embedded && (
       <header className="max-w-2xl mx-auto w-full px-6 pt-7 pb-5 border-b border-border">
         <div className="flex items-baseline justify-between mb-4">
           <div className="flex items-baseline gap-3">
@@ -45,6 +47,24 @@ export default function OnboardingPage({ onComplete, viewMode = false }: Props) 
           </div>
         </div>
       </header>
+      )}
+
+      {/* Embedded mode: show inline章节进度条 */}
+      {embedded && (
+        <div className="max-w-2xl mx-auto w-full px-6 pt-6 pb-4 flex justify-between items-center">
+          <span className="font-meta text-[11px] tracking-[0.22em] uppercase text-text-muted">
+            第 {['一', '二', '三', '四', '五', '六'][idx]} 章 / 0{idx + 1}
+          </span>
+          <div className="flex gap-1">
+            {slides.map((_, i) => (
+              <span
+                key={i}
+                className={`h-[2px] transition-all ${i === idx ? 'w-7 bg-accent' : i < idx ? 'w-3 bg-accent/40' : 'w-3 bg-border'}`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 flex justify-center px-6 pt-12 pb-32 overflow-y-auto">
