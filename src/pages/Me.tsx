@@ -1,0 +1,196 @@
+import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import BgVideo from '../components/BgVideo';
+import AppNav from '../components/AppNav';
+import Avatar from '../components/Avatar';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/auth';
+
+export default function Me() {
+  const { profile, signOut, user } = useAuth();
+  const nav = useNavigate();
+  const [stats, setStats] = useState({ thrown: 0, picked: 0, friends: 0 });
+  const [sheet, setSheet] = useState<'privacy' | 'block' | 'logout' | 'delete' | null>(null);
+  const [blockList, setBlockList] = useState<{ id: string; bottleNo: string; createdAt: string }[]>([]);
+
+  useEffect(() => {
+    if (!profile) return;
+    // TODO(接力): 真 count
+  }, [profile]);
+
+  const emailMasked = (user?.email ?? '').replace(/^(.{2}).*?(@.+)$/, '$1****$2');
+
+  return (
+    <>
+      <BgVideo />
+      <AppNav />
+      <main style={{ position: 'relative', zIndex: 1, minHeight: '100vh', padding: '130px 56px 80px', maxWidth: 720, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 60 }}>
+          {profile && <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}><Avatar color={profile.avatar_color} size={80} /></div>}
+          <div style={{ fontSize: 26, color: '#fff', letterSpacing: 4, marginBottom: 6, textShadow: '0 2px 16px rgba(0,0,0,0.5)' }}>
+            No. <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>{profile?.bottle_no ?? '----'}</em>
+          </div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>{emailMasked}</div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 56, background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(20px)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: '28px 12px' }}>
+          {[
+            ['扔出的瓶子', stats.thrown],
+            ['捞起的瓶子', stats.picked],
+            ['瓶友', stats.friends],
+          ].map(([label, n]) => (
+            <div key={String(label)} style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 38, color: '#fff', fontWeight: 300, letterSpacing: 0.5 }}>{n as number}</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', letterSpacing: 4, marginTop: 6 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <MenuRow label="关于非鹅勿扰漂流瓶" onClick={() => nav('/')} />
+          <MenuRow label="隐私说明" onClick={() => setSheet('privacy')} />
+          <MenuRow label="拉黑列表" onClick={() => setSheet('block')} />
+          <MenuRow label="退出登录" onClick={() => setSheet('logout')} />
+        </div>
+
+        <div style={{ textAlign: 'center', paddingTop: 36, marginTop: 56, borderTop: '0.5px solid rgba(255,255,255,0.12)' }}>
+          <a onClick={() => setSheet('delete')} style={{ fontSize: 14, color: 'rgba(220,120,120,0.85)', letterSpacing: 4, cursor: 'pointer' }}>注销账号</a>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 12, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginTop: 8 }}>all data permanently deleted</div>
+        </div>
+      </main>
+
+      {sheet && (
+        <Sheet onClose={() => setSheet(null)}>
+          {sheet === 'privacy' && <PrivacyContent />}
+          {sheet === 'block' && <BlockListContent items={blockList} onUnblock={() => {}} />}
+          {sheet === 'logout' && <LogoutContent onConfirm={async () => { await signOut(); nav('/'); }} onCancel={() => setSheet(null)} />}
+          {sheet === 'delete' && <DeleteContent onConfirm={async () => {
+            // TODO(接力): 真删 user 数据
+            await signOut();
+            nav('/');
+          }} onCancel={() => setSheet(null)} />}
+        </Sheet>
+      )}
+    </>
+  );
+}
+
+function MenuRow({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <a onClick={onClick} style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '18px 24px',
+      background: 'rgba(255,255,255,0.05)',
+      border: '0.5px solid rgba(255,255,255,0.1)',
+      borderRadius: 10, color: 'rgba(255,255,255,0.88)',
+      fontSize: 15, letterSpacing: 3, cursor: 'pointer',
+    }}>
+      <span>{label}</span>
+      <span style={{ fontFamily: "'Cormorant Garamond', serif", color: 'rgba(255,255,255,0.4)' }}>›</span>
+    </a>
+  );
+}
+
+function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(10px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32,
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        background: 'rgba(20,28,40,0.95)', backdropFilter: 'blur(32px)',
+        border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 16,
+        padding: '36px 40px', maxWidth: 540, width: '100%', maxHeight: '80vh', overflowY: 'auto',
+        color: '#fff', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+      }}>
+        <button onClick={onClose} style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontSize: 13, letterSpacing: 2, cursor: 'pointer' }}>关闭</button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function PrivacyContent() {
+  return (
+    <>
+      <div style={{ fontSize: 20, letterSpacing: 4, marginBottom: 22, paddingBottom: 14, borderBottom: '0.5px solid rgba(255,255,255,0.18)' }}>隐私说明</div>
+      <ul style={{ listStyle: 'none', padding: 0, fontSize: 14.5, lineHeight: 1.95 }}>
+        {[
+          ['身份不公开', '邮箱仅用于登录，不与你扔出的瓶子关联。其他人看不到你是谁。'],
+          ['不存真名照片', '无昵称、无照片，编号和颜色由系统随机分配。'],
+          ['聊天加密', '瓶友之间的对话加密存储，未经你本人操作不会被任何人看到。'],
+          ['会拦截不当内容', '扔瓶时会自动拦截违规、恶意内容；收到不舒服的瓶子可以一键举报。'],
+          ['会处置滥用账号', '多次被举报会被限制使用，必要时封禁。'],
+          ['注销即清空', '注销后所有瓶子、瓶友、聊天记录永久删除，不可恢复。'],
+        ].map(([n, d]) => (
+          <li key={n} style={{ padding: '10px 0 10px 16px', position: 'relative', borderBottom: '0.5px solid rgba(255,255,255,0.1)' }}>
+            <span style={{ position: 'absolute', left: 0, top: 8, fontSize: 18, color: 'rgba(255,255,255,0.6)' }}>·</span>
+            <strong style={{ marginRight: 6 }}>{n}　</strong>{d}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function BlockListContent({ items, onUnblock }: { items: any[]; onUnblock: (id: string) => void }) {
+  return (
+    <>
+      <div style={{ fontSize: 20, letterSpacing: 4, marginBottom: 22, paddingBottom: 14, borderBottom: '0.5px solid rgba(255,255,255,0.18)' }}>拉黑列表</div>
+      {items.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.5)' }}>还没有拉黑过任何人</div>
+      ) : (
+        <div>
+          {items.map(it => (
+            <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.12)' }}>
+              <div>
+                <div style={{ fontSize: 15, letterSpacing: 2 }}>No. <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>{it.bottleNo}</em></div>
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{it.createdAt}</div>
+              </div>
+              <button onClick={() => onUnblock(it.id)} style={{ background: 'transparent', border: '0.5px solid rgba(255,255,255,0.4)', color: 'rgba(255,255,255,0.85)', padding: '6px 14px', borderRadius: 999, fontSize: 12, letterSpacing: 2, cursor: 'pointer' }}>解除</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function LogoutContent({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <>
+      <div style={{ fontSize: 17, letterSpacing: 4, marginBottom: 12, textAlign: 'center' }}>退出登录？</div>
+      <div style={{ opacity: 0.75, textAlign: 'center', marginBottom: 24 }}>下次仍可用同一邮箱回到这里，瓶友与对话都会保留。</div>
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+        <button onClick={onCancel} style={btnGhostStyle}>取消</button>
+        <button onClick={onConfirm} style={{ ...btnGhostStyle, background: 'rgba(255,255,255,0.94)', color: '#1a4456', borderColor: '#fff' }}>确认退出</button>
+      </div>
+    </>
+  );
+}
+
+function DeleteContent({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <>
+      <div style={{ fontSize: 17, letterSpacing: 4, marginBottom: 12, color: 'rgba(220,130,130,0.95)', textAlign: 'center' }}>注销账号</div>
+      <div style={{ opacity: 0.85, marginBottom: 12 }}>这会永久删除你的<strong>所有瓶子、瓶友、聊天记录</strong>，且无法恢复。同一邮箱在 30 天内不能再次注册。</div>
+      <div style={{ opacity: 0.85, marginBottom: 24 }}>确定要继续吗？</div>
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+        <button onClick={onCancel} style={btnGhostStyle}>再想想</button>
+        <button onClick={onConfirm} style={{ ...btnGhostStyle, background: 'rgba(170, 60, 60, 0.95)', color: '#fff', borderColor: 'rgba(170, 60, 60, 0.95)' }}>确认注销</button>
+      </div>
+    </>
+  );
+}
+
+const btnGhostStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: '0.5px solid rgba(255,255,255,0.4)',
+  color: 'rgba(255,255,255,0.85)',
+  padding: '6px 14px',
+  borderRadius: 999,
+  fontSize: 13,
+  letterSpacing: 2,
+  cursor: 'pointer',
+};
