@@ -281,7 +281,7 @@ export default function GuestShowPage({ guests, questionIds, userId, onUpdateLig
       </div>
 
       {/* Bottom */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#EAE4F2] via-[#EAE4F2/95] to-transparent">
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#EDE6D7] via-[#EDE6D7/95] to-transparent">
         <div className="max-w-2xl mx-auto">
           <motion.button onClick={next} disabled={!canGo}
             className="w-full py-3.5 rounded-2xl btn-primary text-base flex items-center justify-center gap-2 disabled:opacity-30"

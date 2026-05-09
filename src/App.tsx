@@ -46,23 +46,13 @@ function App() {
 
       {/* Profile button */}
       {showProfileBtn && state.user && state.phase !== 'profile' && state.phase !== 'notification-detail' && state.phase !== 'about' && (
-        <>
-          {/* 「关于」入口：已登录用户可回看网站理念 */}
-          <motion.button
-            className="fixed top-7 right-[76px] z-50 font-meta text-[11px] tracking-[0.18em] uppercase text-text-muted hover:text-accent px-3 py-1.5 border border-border bg-surface/70 backdrop-blur transition-colors"
-            onClick={goToAbout}
-            initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-          >
-            关于
-          </motion.button>
-          <motion.button className="fixed top-5 right-5 z-50" onClick={goToProfile}
-            initial={{ scale: 0 }} animate={{ scale: 1 }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-            <Avatar nickname={state.user.nickname} color={state.user.avatarColor} size={44} />
-            {state.lightNotifications.filter(n => n.status === 'pending').length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-danger rounded-full border-2 border-bg-start" />
-            )}
-          </motion.button>
-        </>
+        <motion.button className="fixed top-5 right-5 z-50" onClick={goToProfile}
+          initial={{ scale: 0 }} animate={{ scale: 1 }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+          <Avatar nickname={state.user.nickname} color={state.user.avatarColor} size={44} />
+          {state.lightNotifications.filter(n => n.status === 'pending').length > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-danger rounded-full border-2 border-bg-start" />
+          )}
+        </motion.button>
       )}
 
       <AnimatePresence mode="wait">
@@ -163,7 +153,8 @@ function App() {
           {state.phase === 'profile' && state.user && (
             <ProfilePage user={state.user} answers={state.answers} lightNotifications={state.lightNotifications}
               matches={state.matches} onBack={startNewDay} onViewNotification={viewNotification}
-              onDeleteAccount={deleteAccount} onLogout={logout} onUpdateProfile={updateProfile} />
+              onDeleteAccount={deleteAccount} onLogout={logout} onUpdateProfile={updateProfile}
+              onGoAbout={goToAbout} />
           )}
           {state.phase === 'notification-detail' && state.selectedNotification && (
             <NotificationDetailPage notification={state.selectedNotification}

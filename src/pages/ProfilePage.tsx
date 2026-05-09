@@ -17,10 +17,11 @@ interface Props {
   onDeleteAccount: () => void;
   onLogout: () => void;
   onUpdateProfile?: (fields: { nickname?: string; baseCity?: string; wechatId?: string }) => void;
+  onGoAbout?: () => void;
 }
 type Tab = 'info' | 'answers' | 'lights' | 'matches';
 
-export default function ProfilePage({ user, answers, lightNotifications, matches, sentLights, onBack, onViewNotification, onDeleteAccount, onLogout, onUpdateProfile }: Props) {
+export default function ProfilePage({ user, answers, lightNotifications, matches, sentLights, onBack, onViewNotification, onDeleteAccount, onLogout, onUpdateProfile, onGoAbout }: Props) {
   const [tab, setTab] = useState<Tab>('info');
   const [copiedId, setCopiedId] = useState<string|null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -61,7 +62,7 @@ export default function ProfilePage({ user, answers, lightNotifications, matches
 
   return (
     <div className="min-h-screen">
-      <div className="sticky top-0 z-20 bg-[#F0ECF8]/95 border-b border-border-subtle">
+      <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur border-b border-border-subtle">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
           <button onClick={onBack} className="p-1.5 -ml-1.5 rounded-xl hover:bg-white/20 transition-colors"><ArrowLeft className="w-5 h-5 text-text" /></button>
           <span className="font-semibold text-text">个人中心</span>
@@ -115,8 +116,14 @@ export default function ProfilePage({ user, answers, lightNotifications, matches
 
             <p className="text-[11px] text-text-muted text-center pt-1">性别和偏好不可修改，其他信息点击 ✏️ 编辑</p>
 
-            {/* Logout & Delete */}
+            {/* About / Logout / Delete */}
             <div className="pt-8 pb-4 space-y-2">
+              {onGoAbout && (
+                <button onClick={onGoAbout}
+                  className="w-full py-3 rounded-2xl text-sm font-medium text-text-secondary hover:text-text hover:bg-surface-alt transition-all flex items-center justify-center gap-2">
+                  <Heart className="w-4 h-4" /> 关于非鹅勿扰
+                </button>
+              )}
               <button onClick={onLogout}
                 className="w-full py-3 rounded-2xl text-sm font-medium text-text-secondary hover:text-text hover:bg-surface-alt transition-all flex items-center justify-center gap-2">
                 <LogOut className="w-4 h-4" /> 退出登录

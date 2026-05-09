@@ -68,7 +68,7 @@ export default function CheckInPage({ nickname, avatarColor, dayCount, pendingLi
         </motion.div>
 
         <motion.p
-          className="text-text-secondary text-sm mt-5 flex items-center justify-center gap-1.5"
+          className="font-meta text-text-muted text-[11px] mt-6 tracking-[0.18em] uppercase flex items-center justify-center gap-2"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
@@ -78,28 +78,28 @@ export default function CheckInPage({ nickname, avatarColor, dayCount, pendingLi
         </motion.p>
 
         <motion.h1
-          className="text-2xl font-bold text-text mt-2"
+          className="font-display text-[36px] font-normal text-text mt-3 tracking-[-0.02em] leading-tight"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          欢迎回来，{nickname}
+          欢迎回来，<span className="italic text-accent">{nickname}</span>
         </motion.h1>
 
         {/* 签到天数卡片 */}
         <motion.div
-          className="glass rounded-2xl p-6 mt-8"
+          className="card p-7 mt-9"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
         >
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-xs text-text-secondary font-medium">连续签到</span>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Sparkles className="w-3.5 h-3.5 text-accent" />
+            <span className="font-meta text-[11px] text-text-muted tracking-[0.22em] uppercase">留灯 第几天</span>
           </div>
-          <div className="flex items-baseline justify-center gap-1">
+          <div className="flex items-baseline justify-center gap-2">
             <motion.span
-              className="text-5xl font-bold text-primary tabular-nums"
+              className="font-display text-[64px] font-normal italic text-accent tabular-nums leading-none"
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.7 }}
@@ -107,13 +107,13 @@ export default function CheckInPage({ nickname, avatarColor, dayCount, pendingLi
             >
               {dayCount || 1}
             </motion.span>
-            <span className="text-lg text-text-secondary font-medium">天</span>
+            <span className="font-cn text-base text-text-secondary">天</span>
           </div>
 
           {/* 每日一句 */}
           {showQuote && (
             <motion.p
-              className="text-sm text-text-secondary mt-5 leading-relaxed italic"
+              className="font-display text-[15px] italic text-text-secondary mt-6 leading-relaxed text-center border-t border-border-subtle pt-5"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8 }}
@@ -126,14 +126,14 @@ export default function CheckInPage({ nickname, avatarColor, dayCount, pendingLi
         {/* 留灯提醒 */}
         {pendingLights > 0 && (
           <motion.div
-            className="mt-4 rounded-2xl bg-primary-soft px-4 py-3 flex items-center justify-center gap-2"
+            className="mt-5 highlight-block"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.9 }}
           >
-            <span className="text-base">💡</span>
-            <p className="text-sm text-primary font-medium">
-              有 {pendingLights} 位嘉宾为你留灯，等你回应
+            <span className="text-lg leading-snug shrink-0">💡</span>
+            <p className="font-cn text-[14px] text-text leading-snug">
+              有 <span className="font-display italic text-accent text-[16px]">{pendingLights}</span> 位嘉宾为你留灯，等你回应
             </p>
           </motion.div>
         )}
@@ -141,7 +141,7 @@ export default function CheckInPage({ nickname, avatarColor, dayCount, pendingLi
         {/* 开始按钮 */}
         <motion.button
           onClick={onContinue}
-          className="w-full mt-8 py-3.5 rounded-2xl btn-primary text-base flex items-center justify-center gap-2"
+          className="w-full mt-9 py-4 px-6 btn-primary"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.0 }}

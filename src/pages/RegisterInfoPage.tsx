@@ -137,7 +137,7 @@ export default function RegisterInfoPage({ onComplete }: Props) {
         </AnimatePresence>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#EAE4F2] via-[#EAE4F2/95] to-transparent">
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#EDE6D7] via-[#EDE6D7/95] to-transparent">
         <div className="max-w-xl mx-auto flex gap-3">
           {step > 0 && (
             <motion.button onClick={() => setStep(step - 1)} className="w-12 h-12 rounded-2xl btn-glass flex items-center justify-center" whileTap={{ scale: 0.95 }}>
