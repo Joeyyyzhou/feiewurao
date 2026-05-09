@@ -582,10 +582,28 @@ export function useAppState() {
     });
   }, []);
 
+  // 临时存储「进入关于页之前的 phase」，便于返回
+  const [previousPhase, setPreviousPhase] = useState<AppPhase | null>(null);
+
+  const goToAbout = useCallback(() => {
+    setState(prev => {
+      setPreviousPhase(prev.phase);
+      return { ...prev, phase: 'about' as AppPhase };
+    });
+  }, []);
+
+  const backFromAbout = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      phase: (previousPhase || (prev.user ? 'profile' : 'landing')) as AppPhase,
+    }));
+  }, [previousPhase]);
+
   return {
     state, setPhase, sendCode, verifyCode, registerUser, login, setPreferences,
     submitAnswer, finishAnswering, updateGuestLight, finalizeLight,
     goToProfile, goToNotifications, viewNotification, respondToLight,
     checkInDone, welcomeDone, startNewDay, goToDailyComplete, updateProfile, deleteAccount, logout,
+    goToAbout, backFromAbout,
   };
 }

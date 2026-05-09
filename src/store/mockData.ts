@@ -69,6 +69,7 @@ export type AppPhase =
   | 'profile'
   | 'notifications'
   | 'notification-detail'
+  | 'about'
   | 'admin';
 
 // ========== Mock Data Generator ==========

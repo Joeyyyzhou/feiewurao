@@ -39,19 +39,27 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: false, error: '昵称或密码错误' });
     }
 
-    // Calculate correct dayCount
-    const createdDate = u.created_at.split('T')[0];
-    const today = new Date().toISOString().split('T')[0];
-    const created = new Date(createdDate + 'T00:00:00');
-    const now = new Date(today + 'T00:00:00');
-    const dayCount = Math.max(1, Math.floor((now.getTime() - created.getTime()) / 86400000) + 1);
-
-    // Get all answers
+    // Get all answers (needed both for response & dayCount calc)
     const { data: answers } = await supabase
       .from('answers')
       .select('question_id, content, answered_date')
       .eq('user_id', u.id)
       .order('created_at', { ascending: true });
+
+    // === dayCount = 用户实际答过题的独立日期数量 ===
+    // 如果用户中间很多天没登录/没答题，那些天不算
+    // 如果今天还没答题，当前就是"第 N+1 天"（N 为过去已答题的天数）
+    const today = new Date().toISOString().split('T')[0];
+    const answeredDates = new Set(
+      (answers || [])
+        .filter(a => a.answered_date)
+        .map(a => a.answered_date)
+    );
+    const pastActiveDays = answeredDates.size;
+    // 今天还没答题，则今天是新一天（第 pastActiveDays + 1 天）
+    // 今天已经答过题，则今天就是第 pastActiveDays 天
+    const answeredToday = answeredDates.has(today);
+    const dayCount = Math.max(1, answeredToday ? pastActiveDays : pastActiveDays + 1);
 
     return res.status(200).json({
       success: true,

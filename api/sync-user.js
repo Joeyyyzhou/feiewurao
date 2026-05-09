@@ -27,11 +27,7 @@ export default async function handler(req, res) {
     }
 
     const user = users[0];
-    const createdDate = user.created_at.split('T')[0];
     const today = new Date().toISOString().split('T')[0];
-    const created = new Date(createdDate + 'T00:00:00');
-    const now = new Date(today + 'T00:00:00');
-    const dayCount = Math.max(1, Math.floor((now.getTime() - created.getTime()) / 86400000) + 1);
 
     const { data: todayAnswers } = await supabase
       .from('answers')
@@ -39,13 +35,21 @@ export default async function handler(req, res) {
       .eq('user_id', user.id)
       .eq('answered_date', today);
 
-    // 获取用户所有已回答的题目ID
+    // 获取用户所有已回答的题目（含 date 用于算 dayCount）
     const { data: allAnswers } = await supabase
       .from('answers')
-      .select('question_id')
+      .select('question_id, answered_date')
       .eq('user_id', user.id);
 
     const answeredQuestionIds = (allAnswers || []).map(a => a.question_id);
+
+    // === dayCount = 用户实际答过题的独立日期数量 ===
+    const answeredDates = new Set(
+      (allAnswers || []).filter(a => a.answered_date).map(a => a.answered_date)
+    );
+    const pastActiveDays = answeredDates.size;
+    const answeredToday = answeredDates.has(today);
+    const dayCount = Math.max(1, answeredToday ? pastActiveDays : pastActiveDays + 1);
 
     return res.status(200).json({
       success: true,

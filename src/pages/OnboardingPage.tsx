@@ -4,9 +4,10 @@ import { ArrowRight, ArrowLeft } from 'lucide-react';
 
 interface Props {
   onComplete: () => void;
+  viewMode?: boolean; // true 表示已登录用户在查看（顶部改"返回"、末尾按钮改"知道了"）
 }
 
-export default function OnboardingPage({ onComplete }: Props) {
+export default function OnboardingPage({ onComplete, viewMode = false }: Props) {
   const [idx, setIdx] = useState(0);
   const isLast = idx === slides.length - 1;
   const slide = slides[idx];
@@ -25,7 +26,7 @@ export default function OnboardingPage({ onComplete }: Props) {
             onClick={onComplete}
             className="font-meta text-[11px] tracking-[0.16em] uppercase text-text-muted hover:text-accent transition-colors"
           >
-            跳过
+            {viewMode ? '返回' : '跳过'}
           </button>
         </div>
 
@@ -180,7 +181,7 @@ export default function OnboardingPage({ onComplete }: Props) {
             whileTap={{ scale: 0.97 }}
           >
             {isLast ? (
-              '开始吧 ✨'
+              viewMode ? '回到我的空间' : '开始吧 ✨'
             ) : (
               <>
                 继续 <ArrowRight className="w-4 h-4" />
