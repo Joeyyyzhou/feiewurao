@@ -83,14 +83,28 @@ export default function Sea() {
         </div>
 
         <div style={{ position: 'absolute', left: '50%', bottom: '18%', transform: 'translateX(-50%)', display: 'flex', gap: 18 }}>
-          <Link to="/throw" className="btn btn-primary" aria-disabled={thrown >= 3}>
-            扔一个瓶子
-            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, opacity: 0.55 }}>{3 - thrown} / 3</span>
-          </Link>
-          <Link to="/pick" className="btn btn-ghost" aria-disabled={picked >= 3}>
-            捞一个瓶子
-            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, opacity: 0.55 }}>{3 - picked} / 3</span>
-          </Link>
+          {thrown >= 3 ? (
+            <button className="btn btn-primary" disabled style={{ opacity: 0.4, cursor: 'not-allowed' }}>
+              今日扔瓶已满
+              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, opacity: 0.55 }}>0 / 3</span>
+            </button>
+          ) : (
+            <Link to="/throw" className="btn btn-primary">
+              扔一个瓶子
+              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, opacity: 0.55 }}>{3 - thrown} / 3</span>
+            </Link>
+          )}
+          {picked >= 3 ? (
+            <button className="btn btn-ghost" disabled style={{ opacity: 0.4, cursor: 'not-allowed' }}>
+              今日捞瓶已满
+              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, opacity: 0.55 }}>0 / 3</span>
+            </button>
+          ) : (
+            <Link to="/pick" className="btn btn-ghost">
+              捞一个瓶子
+              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, opacity: 0.55 }}>{3 - picked} / 3</span>
+            </Link>
+          )}
         </div>
 
         <div style={{ position: 'absolute', bottom: 44, left: '50%', transform: 'translateX(-50%)', textAlign: 'center', color: 'rgba(255,255,255,0.6)', letterSpacing: 6, fontSize: 12, fontFamily: "'Source Han Serif CN VF Light', serif" }}>
