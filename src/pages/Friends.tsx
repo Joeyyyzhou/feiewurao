@@ -23,9 +23,51 @@ export default function Friends() {
 
   useEffect(() => {
     if (!profile) return;
-    // TODO(接力): 真 SQL —— 现在 stub 空列表
-    setFriends([]);
-    setLoading(false);
+    let cancelled = false;
+    (async () => {
+      const { data: convs, error } = await supabase
+        .from('conversations')
+        .select('id, status, created_at, ended_at, user_a, user_b')
+        .or(`user_a.eq.${profile.id},user_b.eq.${profile.id}`)
+        .order('created_at', { ascending: false });
+      if (cancelled) return;
+      if (error || !convs) {
+        setLoading(false);
+        return;
+      }
+      const otherIds = convs.map((c: any) => c.user_a === profile.id ? c.user_b : c.user_a);
+      const { data: others } = await supabase
+        .from('users')
+        .select('id, bottle_no, avatar_color')
+        .in('id', otherIds);
+      const othersMap = new Map<string, { bottle_no: string; avatar_color: string }>();
+      (others ?? []).forEach((u: any) => othersMap.set(u.id, { bottle_no: u.bottle_no, avatar_color: u.avatar_color }));
+
+      const items: FriendItem[] = await Promise.all((convs as any[]).map(async (c) => {
+        const otherId = c.user_a === profile.id ? c.user_b : c.user_a;
+        const other = othersMap.get(otherId);
+        const { data: msg } = await supabase
+          .from('messages')
+          .select('content, sender_id, created_at')
+          .eq('conversation_id', c.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return {
+          conversationId: c.id,
+          bottleNo: other?.bottle_no ?? '----',
+          avatarColor: other?.avatar_color ?? 'c1',
+          preview: (msg as any)?.content?.slice(0, 28) ?? '',
+          speaker: (msg as any)?.sender_id === profile.id ? 'me' : 'them',
+          time: relativeTime(c.ended_at ?? (msg as any)?.created_at ?? c.created_at),
+          ended: c.status === 'ended',
+        };
+      }));
+      if (cancelled) return;
+      setFriends(items);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, [profile]);
 
   const active = friends.filter(f => !f.ended);
@@ -81,4 +123,19 @@ export default function Friends() {
       </main>
     </>
   );
+}
+
+function relativeTime(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return '刚刚';
+  if (m < 60) return `${m} 分钟前`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} 小时前`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d} 天前`;
+  const w = Math.floor(d / 7);
+  if (w < 4) return `${w} 周前`;
+  return `${Math.floor(d / 30)} 个月前`;
 }

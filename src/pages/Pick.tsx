@@ -3,14 +3,22 @@ import { useNavigate, Link } from 'react-router-dom';
 import BgVideo from '../components/BgVideo';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import type { BottleRow, ReplyMood } from '../lib/database.types';
+import type { ReplyMood } from '../lib/database.types';
 
 const REPLY_MOODS: ReplyMood[] = ['同感', '抱抱', '陪你', '听着', '打气', '路过', '冒泡', '辛苦'];
+
+interface PickedBottle {
+  id: string;
+  content: string;
+  mood: string;
+  author_no: string;
+  created_at: string;
+}
 
 export default function Pick() {
   const { profile } = useAuth();
   const nav = useNavigate();
-  const [bottle, setBottle] = useState<(BottleRow & { author_no: string }) | null>(null);
+  const [bottle, setBottle] = useState<PickedBottle | null>(null);
   const [loading, setLoading] = useState(true);
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
@@ -19,27 +27,58 @@ export default function Pick() {
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState<string | null>(null);
 
+  const [pickErr, setPickErr] = useState<string | null>(null);
+
   useEffect(() => {
     if (!profile) return;
-    // TODO(接力): 调 RPC pick_bottle 真随机捞
-    setLoading(false);
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.rpc('pick_bottle' as any);
+      if (cancelled) return;
+      if (error) {
+        if (error.message.includes('quota')) {
+          setPickErr('今天的 3 次捞瓶机会已用完，明天再来吧。');
+        } else {
+          setPickErr(error.message);
+        }
+        setLoading(false);
+        return;
+      }
+      // RPC 返回 setof，data 是数组
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row) {
+        setBottle(row as any);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, [profile]);
 
   async function sendReply() {
-    if (!bottle) return;
-    // TODO(接力): RPC submit_reply
+    if (!bottle || !replyText.trim()) return;
+    const { error } = await supabase.rpc('submit_reply' as any, {
+      p_bottle_id: bottle.id,
+      p_content: replyText.trim(),
+      p_reply_mood: replyMood,
+    });
+    if (error) { setPickErr(error.message); return; }
     setOverlay('reply');
     setTimeout(() => nav('/sea?fromReply=1'), 2200);
   }
   async function tossBack() {
     if (!bottle) return;
-    // TODO(接力): RPC toss_bottle
+    await supabase.rpc('toss_bottle' as any, { p_bottle_id: bottle.id });
     setOverlay('toss');
     setTimeout(() => nav('/sea'), 2200);
   }
   async function submitReport() {
-    if (!bottle || !reportReason) return;
-    // TODO(接力): insert reports
+    if (!bottle || !reportReason || !profile) return;
+    await supabase.from('reports').insert({
+      reporter: profile.id,
+      bottle_id: bottle.id,
+      message_id: null,
+      reason: reportReason as any,
+    });
     setReportOpen(false);
     setOverlay('report');
     setTimeout(() => nav('/sea'), 2400);
@@ -59,7 +98,7 @@ export default function Pick() {
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.5)' }}>正在从海里捞起一个瓶子…</div>
             ) : !bottle ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.5)' }}>
-                海里暂时没有适合你的瓶子。<br/>过一会儿再来试试？
+                {pickErr ? (<>{pickErr}</>) : (<>海里暂时没有适合你的瓶子。<br/>过一会儿再来试试？</>)}
                 <div style={{ marginTop: 24 }}><Link to="/sea" className="btn btn-ghost">回到海面</Link></div>
               </div>
             ) : (

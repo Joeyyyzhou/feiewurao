@@ -20,21 +20,35 @@ export default function Throw() {
   async function submit() {
     if (!profile || !mood || !content.trim()) return;
     setErr(null);
+    setWarn(false);
     setSubmitting(true);
-    // 调用 Edge Function（敏感词后端）—— 接力时实现
-    const { error } = await supabase.from('bottles').insert({
-      user_id: profile.id,
-      content: content.trim(),
-      mood,
-    });
-    setSubmitting(false);
-    if (error) {
-      // TODO(接力): 后端返 sensitive 时显示 warn
-      if (error.message.toLowerCase().includes('sensitive')) {
+
+    // 1) 先尝试调敏感词 Edge Function（未部署也不阻塞）
+    try {
+      const { data: scan } = await supabase.functions.invoke('sensitive-check', {
+        body: { content: content.trim() },
+      });
+      if (scan?.sensitive) {
+        setSubmitting(false);
         setWarn(true);
         return;
       }
-      setErr(error.message);
+    } catch {
+      // 函数未部署：跳过，由 RPC 兜底
+    }
+
+    // 2) 调 RPC throw_bottle（含每日额度检查）
+    const { error } = await supabase.rpc('throw_bottle' as any, {
+      p_content: content.trim(),
+      p_mood: mood,
+    });
+    setSubmitting(false);
+    if (error) {
+      if (error.message.includes('quota')) {
+        setErr('今天的 3 次扔瓶机会已用完，明天再来吧。');
+      } else {
+        setErr(error.message);
+      }
       return;
     }
     setOverlay(true);

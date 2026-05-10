@@ -47,7 +47,7 @@ export default function Sea() {
       .eq('user_id', profile.id)
       .eq('date', today)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         if (data) {
           setThrown(data.thrown);
           setPicked(data.picked);

@@ -14,12 +14,55 @@ export default function Chat() {
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [input, setInput] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [otherNo, setOtherNo] = useState('----');
+  const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // 加载消息 + 找到对方 + 订阅 Realtime
   useEffect(() => {
-    if (!conversationId) return;
-    // TODO(接力): load messages + Realtime subscribe
-  }, [conversationId]);
+    if (!conversationId || !profile) return;
+
+    let unsub: (() => void) | null = null;
+    (async () => {
+      // 找出对方
+      const { data: conv } = await supabase
+        .from('conversations')
+        .select('user_a, user_b')
+        .eq('id', conversationId)
+        .single();
+      if (conv) {
+        const otherId = (conv as any).user_a === profile.id ? (conv as any).user_b : (conv as any).user_a;
+        setOtherUserId(otherId);
+        const { data: u } = await supabase.from('users').select('bottle_no').eq('id', otherId).single();
+        if (u) setOtherNo((u as any).bottle_no);
+      }
+
+      // 拉历史消息
+      const { data: msgs } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+      if (msgs) setMessages(msgs as MessageRow[]);
+
+      // 订阅 Realtime
+      const channel = supabase
+        .channel(`conv:${conversationId}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+          (payload: any) => {
+            setMessages((prev) => {
+              if (prev.find(m => m.id === (payload.new as any).id)) return prev;
+              return [...prev, payload.new as MessageRow];
+            });
+          },
+        )
+        .subscribe();
+      unsub = () => { supabase.removeChannel(channel); };
+    })();
+    return () => { if (unsub) unsub(); };
+  }, [conversationId, profile]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -27,17 +70,29 @@ export default function Chat() {
 
   async function send() {
     if (!input.trim() || !conversationId || !profile) return;
-    // TODO(接力): supabase.from('messages').insert
     const text = input.trim();
     setInput('');
-    setMessages(m => [...m, { id: String(Date.now()), conversation_id: conversationId, sender_id: profile.id, content: text, reply_mood: null, created_at: new Date().toISOString() }]);
+    const { error } = await supabase.from('messages').insert({
+      conversation_id: conversationId,
+      sender_id: profile.id,
+      content: text,
+      reply_mood: null,
+    });
+    if (error) {
+      // 失败回滚 input 让用户能重发
+      setInput(text);
+      console.error('send failed:', error.message);
+    }
+    // 自己发的也通过 Realtime 回流，避免重复 setState
   }
   async function endChat() {
-    // TODO(接力): RPC end_conversation
+    if (!conversationId) return;
+    await supabase.rpc('end_conversation' as any, { p_conv_id: conversationId });
     nav('/friends');
   }
   async function blockTA() {
-    // TODO(接力): insert blocks
+    if (!profile || !otherUserId) { nav('/friends'); return; }
+    await supabase.from('blocks').insert({ blocker: profile.id, blocked: otherUserId });
     nav('/friends');
   }
 
@@ -46,7 +101,7 @@ export default function Chat() {
       <BgVideo />
       <div style={immersiveBar}>
         <Link to="/friends" style={backStyle}>← 瓶友</Link>
-        <div style={{ fontSize: 16, color: '#fff', letterSpacing: 6, textShadow: '0 1px 8px rgba(0,0,0,0.4)', fontFamily: '"Source Han Serif CN VF Medium", serif' }}>与 No.{conversationId?.slice(0, 4)} 的漂流</div>
+        <div style={{ fontSize: 16, color: '#fff', letterSpacing: 6, textShadow: '0 1px 8px rgba(0,0,0,0.4)', fontFamily: '"Source Han Serif CN VF Medium", serif' }}>与 No.{otherNo} 的漂流</div>
         <a onClick={() => setMenuOpen(!menuOpen)} style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', letterSpacing: 4, cursor: 'pointer' }}>⋯</a>
       </div>
 

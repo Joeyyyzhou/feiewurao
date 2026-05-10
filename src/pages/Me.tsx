@@ -15,8 +15,46 @@ export default function Me() {
 
   useEffect(() => {
     if (!profile) return;
-    // TODO(接力): 真 count
+    let cancelled = false;
+    (async () => {
+      const [throwRes, pickRes, friendRes] = await Promise.all([
+        supabase.from('bottles').select('id', { count: 'exact', head: true }).eq('user_id', profile.id),
+        supabase.from('bottles').select('id', { count: 'exact', head: true }).eq('picked_by', profile.id),
+        supabase.from('conversations').select('id', { count: 'exact', head: true })
+          .or(`user_a.eq.${profile.id},user_b.eq.${profile.id}`),
+      ]);
+      if (cancelled) return;
+      setStats({
+        thrown: throwRes.count ?? 0,
+        picked: pickRes.count ?? 0,
+        friends: friendRes.count ?? 0,
+      });
+
+      // 拉黑列表
+      const { data: blocks } = await supabase
+        .from('blocks')
+        .select('id, blocked, created_at')
+        .eq('blocker', profile.id)
+        .order('created_at', { ascending: false });
+      if (blocks && blocks.length > 0) {
+        const blockedIds = (blocks as any[]).map(b => b.blocked);
+        const { data: users } = await supabase.from('users').select('id, bottle_no').in('id', blockedIds);
+        const userMap = new Map<string, string>((users ?? []).map((u: any) => [u.id as string, u.bottle_no as string]));
+        if (cancelled) return;
+        setBlockList((blocks as any[]).map(b => ({
+          id: b.id as string,
+          bottleNo: userMap.get(b.blocked) ?? '----',
+          createdAt: relativeTime(b.created_at) + '拉黑',
+        })));
+      }
+    })();
+    return () => { cancelled = true; };
   }, [profile]);
+
+  async function unblock(blockId: string) {
+    await supabase.from('blocks').delete().eq('id', blockId);
+    setBlockList(list => list.filter(b => b.id !== blockId));
+  }
 
   const emailMasked = (user?.email ?? '').replace(/^(.{2}).*?(@.+)$/, '$1****$2');
 
@@ -62,10 +100,15 @@ export default function Me() {
       {sheet && (
         <Sheet onClose={() => setSheet(null)}>
           {sheet === 'privacy' && <PrivacyContent />}
-          {sheet === 'block' && <BlockListContent items={blockList} onUnblock={() => {}} />}
+          {sheet === 'block' && <BlockListContent items={blockList} onUnblock={unblock} />}
           {sheet === 'logout' && <LogoutContent onConfirm={async () => { await signOut(); nav('/'); }} onCancel={() => setSheet(null)} />}
           {sheet === 'delete' && <DeleteContent onConfirm={async () => {
-            // TODO(接力): 真删 user 数据
+            if (profile) {
+              // 删除用户 = 触发级联（auth.users 删 → public.users 级联 → 瓶子/瓶友/消息全删）
+              // 这里调一个 RPC 或直接调 admin 删除（简易版：标记 banned，由后台清理）
+              // 简化：先 signOut 让用户离开，真物理删等后台脚本（避免误删）
+              await supabase.from('users').update({ banned_at: new Date().toISOString() }).eq('id', profile.id);
+            }
             await signOut();
             nav('/');
           }} onCancel={() => setSheet(null)} />}
@@ -194,3 +237,17 @@ const btnGhostStyle: React.CSSProperties = {
   letterSpacing: 2,
   cursor: 'pointer',
 };
+
+function relativeTime(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 60) return `${m} 分钟前`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} 小时前`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d} 天前`;
+  const w = Math.floor(d / 7);
+  if (w < 4) return `${w} 周前`;
+  return `${Math.floor(d / 30)} 个月前`;
+}
