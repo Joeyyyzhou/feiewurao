@@ -37,8 +37,7 @@ export default function Me() {
         .eq('blocker', profile.id)
         .order('created_at', { ascending: false });
       if (blocks && blocks.length > 0) {
-        const blockedIds = (blocks as any[]).map(b => b.blocked);
-        const { data: users } = await supabase.from('users').select('id, bottle_no').in('id', blockedIds);
+        const { data: users } = await supabase.rpc('get_blocked_profiles' as any);
         const userMap = new Map<string, string>((users ?? []).map((u: any) => [u.id as string, u.bottle_no as string]));
         if (cancelled) return;
         setBlockList((blocks as any[]).map(b => ({

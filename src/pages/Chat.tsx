@@ -33,8 +33,9 @@ export default function Chat() {
       if (conv) {
         const otherId = (conv as any).user_a === profile.id ? (conv as any).user_b : (conv as any).user_a;
         setOtherUserId(otherId);
-        const { data: u } = await supabase.from('users').select('bottle_no').eq('id', otherId).single();
-        if (u) setOtherNo((u as any).bottle_no);
+        const { data: u } = await supabase.rpc('get_friend_profile' as any, { p_other_id: otherId });
+        const row = Array.isArray(u) ? u[0] : u;
+        if (row) setOtherNo((row as any).bottle_no);
       }
 
       // 拉历史消息

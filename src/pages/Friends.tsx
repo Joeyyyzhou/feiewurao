@@ -36,10 +36,7 @@ export default function Friends() {
         return;
       }
       const otherIds = convs.map((c: any) => c.user_a === profile.id ? c.user_b : c.user_a);
-      const { data: others } = await supabase
-        .from('users')
-        .select('id, bottle_no, avatar_color')
-        .in('id', otherIds);
+      const { data: others } = await supabase.rpc('get_friend_profiles' as any, { p_other_ids: otherIds });
       const othersMap = new Map<string, { bottle_no: string; avatar_color: string }>();
       (others ?? []).forEach((u: any) => othersMap.set(u.id, { bottle_no: u.bottle_no, avatar_color: u.avatar_color }));
 

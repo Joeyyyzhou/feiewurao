@@ -1,11 +1,84 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import BgVideo from '../components/BgVideo';
 
+type Stage = 'form' | 'wait-email' | 'verifying';
+
 export default function Register() {
   const nav = useNavigate();
-  const [mode, setMode] = useState<'register' | 'login'>('register');
+  const [stage, setStage] = useState<Stage>('form');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  // session 监听：用户从邮件回来后，session 会建立 → 调 create_profile → 进站
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_event: any, s: any) => {
+      if (s?.user?.email_confirmed_at || s?.user?.confirmed_at) {
+        setStage('verifying');
+        const { error } = await supabase.rpc('create_profile');
+        if (error) {
+          setErr('建账号失败：' + error.message);
+          setStage('form');
+          return;
+        }
+        nav('/sea');
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [nav]);
+
+  async function submit() {
+    setErr(null);
+    if (!email.endsWith('@tencent.com')) {
+      setErr('请使用 @tencent.com 企业邮箱');
+      return;
+    }
+    if (password.length < 6) {
+      setErr('密码至少 6 位');
+      return;
+    }
+    setSubmitting(true);
+
+    // 1) 先尝试登录（老用户）
+    const signIn = await supabase.auth.signInWithPassword({ email, password });
+    if (!signIn.error && signIn.data.user) {
+      // 老用户：检查邮箱是否已确认
+      if (!signIn.data.user.email_confirmed_at && !(signIn.data.user as any).confirmed_at) {
+        setSubmitting(false);
+        setStage('wait-email');
+        return;
+      }
+      // 已确认 → 建/取 profile 后进站
+      const { error: profErr } = await supabase.rpc('create_profile');
+      setSubmitting(false);
+      if (profErr) { setErr(profErr.message); return; }
+      nav('/sea');
+      return;
+    }
+
+    // 2) 登录失败且是凭证错误 → 走注册
+    if (signIn.error && /invalid login credentials/i.test(signIn.error.message)) {
+      const signUp = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+      setSubmitting(false);
+      if (signUp.error) { setErr(signUp.error.message); return; }
+      // 注册成功后 Supabase 已发邮件，停在 wait-email
+      setStage('wait-email');
+      return;
+    }
+
+    // 3) 其他错误（密码错等）
+    setSubmitting(false);
+    setErr(signIn.error?.message ?? '登录失败');
+  }
 
   return (
     <>
@@ -27,11 +100,64 @@ export default function Register() {
           maxWidth: 460,
           boxShadow: '0 16px 48px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.4)',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
-            <Tab active={mode === 'register'} onClick={() => setMode('register')}>注册 / 登录</Tab>
-          </div>
+          {stage === 'form' && (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: 32, fontSize: 13, color: 'rgba(255,255,255,0.85)', letterSpacing: 3, paddingBottom: 14, borderBottom: '0.5px solid rgba(255,255,255,0.18)' }}>
+                注册 / 登录
+              </div>
 
-          {mode === 'register' && <RegisterForm onSuccess={() => nav('/sea')} />}
+              <FormRow label="企业邮箱">
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="yourname@tencent.com" style={inputStyle} />
+              </FormRow>
+
+              <FormRow label="密码">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+                  placeholder="至少 6 位"
+                  style={inputStyle}
+                />
+              </FormRow>
+
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4, marginBottom: 8 }}>
+                新用户首次注册需邮箱验证 · 老用户直接登录
+              </div>
+
+              {err && <div style={{ color: 'rgba(255,180,180,0.95)', fontSize: 13, marginTop: 4, marginBottom: 10 }}>⚠ {err}</div>}
+
+              <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 18 }} onClick={submit} disabled={submitting || !email || !password}>
+                {submitting ? '处理中…' : '进入海面'}
+              </button>
+            </>
+          )}
+
+          {stage === 'wait-email' && (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, color: 'rgba(255,255,255,0.55)', letterSpacing: 4, marginBottom: 18 }}>check your inbox</div>
+              <div style={{ fontSize: 16, lineHeight: 1.9, letterSpacing: 1.5, marginBottom: 24 }}>
+                我们给 <em style={{ fontStyle: 'normal', color: '#fff' }}>{email}</em> 发了一封确认邮件。<br/>
+                点击邮件中的链接完成验证，<br/>
+                然后回到这里就能进站了。
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.8, marginBottom: 28, letterSpacing: 1 }}>
+                没收到？检查垃圾邮件夹，<br/>
+                或确认邮箱真实存在且为 @tencent.com 工作邮箱
+              </div>
+              <button className="btn btn-ghost" onClick={() => { setStage('form'); setErr(null); }} style={{ marginRight: 12 }}>换个邮箱</button>
+              <button className="btn btn-primary" onClick={async () => {
+                await supabase.auth.resend({ type: 'signup', email });
+                alert('已重新发送，请稍等几秒查看邮箱');
+              }}>重发邮件</button>
+            </div>
+          )}
+
+          {stage === 'verifying' && (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.7)' }}>
+              邮箱验证通过，正在为你分配编号…
+            </div>
+          )}
         </div>
 
         <div style={{ marginTop: 32, textAlign: 'center', fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: 2, lineHeight: 1.8 }}>
@@ -39,101 +165,6 @@ export default function Register() {
           邮箱仅用于登录，不与瓶子关联
         </div>
       </main>
-    </>
-  );
-}
-
-function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <div onClick={onClick} style={{
-      flex: 1, textAlign: 'center', padding: '12px 0',
-      fontSize: 13, color: active ? '#fff' : 'rgba(255,255,255,0.5)', letterSpacing: 3,
-      cursor: 'pointer',
-      borderBottom: active ? '1px solid rgba(255,255,255,0.85)' : '0.5px solid rgba(255,255,255,0.18)',
-      fontFamily: active ? '"Source Han Serif CN VF Medium", serif' : '"Source Han Serif CN VF Light", serif',
-    }}>{children}</div>
-  );
-}
-
-function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function submit() {
-    setErr(null);
-    if (!email.endsWith('@tencent.com')) {
-      setErr('请使用 @tencent.com 企业邮箱');
-      return;
-    }
-    if (password.length < 6) {
-      setErr('密码至少 6 位');
-      return;
-    }
-    setSubmitting(true);
-
-    // 先尝试登录；失败再注册（这样同一表单同时支持新老用户）
-    let { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error && /invalid login credentials/i.test(error.message)) {
-      // 该邮箱可能不存在 → 注册
-      const signUp = await supabase.auth.signUp({ email, password });
-      data = signUp.data;
-      error = signUp.error;
-    }
-
-    if (error) {
-      setSubmitting(false);
-      setErr(error.message);
-      return;
-    }
-
-    if (data.user) {
-      // OTP / signUp 成功后，调 RPC 建 profile（已存在则返回现有）
-      const { error: profErr } = await supabase.rpc('create_profile');
-      setSubmitting(false);
-      if (profErr) {
-        setErr('建账号失败：' + profErr.message);
-        return;
-      }
-      onSuccess();
-    } else {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <>
-      <FormRow label="企业邮箱">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="yourname@tencent.com"
-          style={inputStyle}
-        />
-      </FormRow>
-
-      <FormRow label="密码">
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
-          placeholder="至少 6 位"
-          style={inputStyle}
-        />
-      </FormRow>
-
-      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4, marginBottom: 8 }}>
-        新用户自动注册 · 老用户自动登录
-      </div>
-
-      {err && <div style={{ color: 'rgba(255,180,180,0.95)', fontSize: 13, marginTop: 4, marginBottom: 10 }}>⚠ {err}</div>}
-
-      <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 18 }} onClick={submit} disabled={submitting || !email || !password}>
-        {submitting ? '处理中…' : '进入海面'}
-      </button>
     </>
   );
 }
