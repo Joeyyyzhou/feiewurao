@@ -98,11 +98,18 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
       token: otp,
       type: 'email',
     });
-    setVerifying(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setVerifying(false); setErr(error.message); return; }
     if (data.user) {
-      // 触发 server-side 创建 profile（DB trigger 会自动建 users 行）
+      // OTP 验证成功后，前端调 RPC 建 profile（已存在则返回现有）
+      const { error: profErr } = await supabase.rpc('create_profile');
+      setVerifying(false);
+      if (profErr) {
+        setErr('建账号失败：' + profErr.message);
+        return;
+      }
       onSuccess();
+    } else {
+      setVerifying(false);
     }
   }
 
