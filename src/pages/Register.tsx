@@ -57,59 +57,48 @@ function Tab({ active, onClick, children }: { active: boolean; onClick: () => vo
 
 function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [stage, setStage] = useState<'email' | 'otp'>('email');
-  const [sending, setSending] = useState(false);
-  const [verifying, setVerifying] = useState(false);
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState(0);
 
-  async function sendOtp() {
+  async function submit() {
     setErr(null);
     if (!email.endsWith('@tencent.com')) {
       setErr('请使用 @tencent.com 企业邮箱');
       return;
     }
-    setSending(true);
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
-    });
-    setSending(false);
+    if (password.length < 6) {
+      setErr('密码至少 6 位');
+      return;
+    }
+    setSubmitting(true);
+
+    // 先尝试登录；失败再注册（这样同一表单同时支持新老用户）
+    let { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error && /invalid login credentials/i.test(error.message)) {
+      // 该邮箱可能不存在 → 注册
+      const signUp = await supabase.auth.signUp({ email, password });
+      data = signUp.data;
+      error = signUp.error;
+    }
+
     if (error) {
+      setSubmitting(false);
       setErr(error.message);
       return;
     }
-    setStage('otp');
-    setCountdown(60);
-    const id = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) { clearInterval(id); return 0; }
-        return c - 1;
-      });
-    }, 1000);
-  }
 
-  async function verifyOtp() {
-    setErr(null);
-    setVerifying(true);
-    const { data, error } = await supabase.auth.verifyOtp({
-      email,
-      token: otp,
-      type: 'email',
-    });
-    if (error) { setVerifying(false); setErr(error.message); return; }
     if (data.user) {
-      // OTP 验证成功后，前端调 RPC 建 profile（已存在则返回现有）
+      // OTP / signUp 成功后，调 RPC 建 profile（已存在则返回现有）
       const { error: profErr } = await supabase.rpc('create_profile');
-      setVerifying(false);
+      setSubmitting(false);
       if (profErr) {
         setErr('建账号失败：' + profErr.message);
         return;
       }
       onSuccess();
     } else {
-      setVerifying(false);
+      setSubmitting(false);
     }
   }
 
@@ -117,49 +106,34 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
     <>
       <FormRow label="企业邮箱">
         <input
-          className="form-input"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="yourname@tencent.com"
-          disabled={stage === 'otp'}
           style={inputStyle}
         />
       </FormRow>
 
-      {stage === 'otp' && (
-        <FormRow label="邮箱验证码">
-          <input
-            className="form-input"
-            type="text"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            placeholder="6 位数字"
-            maxLength={6}
-            style={{ ...inputStyle, textAlign: 'center', fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 24, letterSpacing: 12 }}
-          />
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 6 }}>
-            验证码已发送到 {email}，5 分钟内有效
-          </div>
-        </FormRow>
-      )}
+      <FormRow label="密码">
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+          placeholder="至少 6 位"
+          style={inputStyle}
+        />
+      </FormRow>
+
+      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4, marginBottom: 8 }}>
+        新用户自动注册 · 老用户自动登录
+      </div>
 
       {err && <div style={{ color: 'rgba(255,180,180,0.95)', fontSize: 13, marginTop: 4, marginBottom: 10 }}>⚠ {err}</div>}
 
-      {stage === 'email' ? (
-        <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 24 }} onClick={sendOtp} disabled={sending || !email}>
-          {sending ? '发送中…' : '发送验证码'}
-        </button>
-      ) : (
-        <>
-          <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 24 }} onClick={verifyOtp} disabled={verifying || otp.length !== 6}>
-            {verifying ? '验证中…' : '进入海面'}
-          </button>
-          <div style={{ marginTop: 16, textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
-            {countdown > 0 ? <>{countdown}s 后可重发</> : <a onClick={() => setStage('email')} style={{ color: 'rgba(255,255,255,0.85)', cursor: 'pointer', borderBottom: '0.5px solid rgba(255,255,255,0.4)' }}>重新发送</a>}
-          </div>
-        </>
-      )}
+      <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 18 }} onClick={submit} disabled={submitting || !email || !password}>
+        {submitting ? '处理中…' : '进入海面'}
+      </button>
     </>
   );
 }
