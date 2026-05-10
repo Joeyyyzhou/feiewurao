@@ -18,8 +18,28 @@ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='light_records') THEN
     ALTER TABLE public.light_records RENAME TO _legacy_light_records;
   END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='light_actions') THEN
+    ALTER TABLE public.light_actions RENAME TO _legacy_light_actions;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='light_notifications') THEN
+    ALTER TABLE public.light_notifications RENAME TO _legacy_light_notifications;
+  END IF;
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='matches') THEN
     ALTER TABLE public.matches RENAME TO _legacy_matches;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='daily_question_assignments') THEN
+    ALTER TABLE public.daily_question_assignments RENAME TO _legacy_daily_question_assignments;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='page_views') THEN
+    ALTER TABLE public.page_views RENAME TO _legacy_page_views;
+  END IF;
+  -- 老 users 表如果列结构不对（没有 bottle_no），归档
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='users'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='bottle_no'
+  ) THEN
+    ALTER TABLE public.users RENAME TO _legacy_users;
   END IF;
 END$$;
 
@@ -290,41 +310,60 @@ ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quotas ENABLE ROW LEVEL SECURITY;
 
 -- users: 只能看自己（profile 详情）+ 别人只能看 bottle_no/avatar_color（通过 view）
+DROP POLICY IF EXISTS users_self ON public.users;
 CREATE POLICY users_self ON public.users FOR SELECT USING (id = auth.uid());
 
 -- bottles: 自己的瓶子可见；其他活跃瓶子由 RPC 控制（不开 select）
+DROP POLICY IF EXISTS bottles_self ON public.bottles;
 CREATE POLICY bottles_self ON public.bottles FOR SELECT USING (user_id = auth.uid());
 -- 不允许直接 INSERT，必须走 throw_bottle RPC
 -- 不允许直接 UPDATE/DELETE
 
 -- conversations: 仅参与方可见
+DROP POLICY IF EXISTS conv_participant ON public.conversations;
 CREATE POLICY conv_participant ON public.conversations FOR SELECT USING (user_a = auth.uid() OR user_b = auth.uid());
 
 -- messages: 仅 conversation 参与方可见 + 发
+DROP POLICY IF EXISTS msg_select ON public.messages;
 CREATE POLICY msg_select ON public.messages FOR SELECT USING (
   conversation_id IN (SELECT id FROM conversations WHERE user_a = auth.uid() OR user_b = auth.uid())
 );
+DROP POLICY IF EXISTS msg_insert ON public.messages;
 CREATE POLICY msg_insert ON public.messages FOR INSERT WITH CHECK (
   sender_id = auth.uid() AND
   conversation_id IN (SELECT id FROM conversations WHERE (user_a = auth.uid() OR user_b = auth.uid()) AND status = 'active')
 );
 
 -- blocks: 仅自己的可见
+DROP POLICY IF EXISTS blocks_self_select ON public.blocks;
 CREATE POLICY blocks_self_select ON public.blocks FOR SELECT USING (blocker = auth.uid());
+DROP POLICY IF EXISTS blocks_self_insert ON public.blocks;
 CREATE POLICY blocks_self_insert ON public.blocks FOR INSERT WITH CHECK (blocker = auth.uid());
+DROP POLICY IF EXISTS blocks_self_delete ON public.blocks;
 CREATE POLICY blocks_self_delete ON public.blocks FOR DELETE USING (blocker = auth.uid());
 
 -- reports: 仅自己提交的可见
+DROP POLICY IF EXISTS reports_self_select ON public.reports;
 CREATE POLICY reports_self_select ON public.reports FOR SELECT USING (reporter = auth.uid());
+DROP POLICY IF EXISTS reports_self_insert ON public.reports;
 CREATE POLICY reports_self_insert ON public.reports FOR INSERT WITH CHECK (reporter = auth.uid());
 
 -- quotas: 仅自己
+DROP POLICY IF EXISTS quotas_self ON public.quotas;
 CREATE POLICY quotas_self ON public.quotas FOR ALL USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 
 ------------------------------------------------------------
 -- 11. Realtime（聊天）
 ------------------------------------------------------------
-ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'messages'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+  END IF;
+END$$;
 
 -- 完成
 SELECT '✓ schema deployed' AS status;

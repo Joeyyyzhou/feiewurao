@@ -1,8 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#1A2E45"/>
-  <g transform="translate(32, 35)">
-    <path d="M -7 -18 L 7 -18 L 7 -14 L 11 -10 C 16 -5 18 0 18 6 C 18 12 11 17 0 17 C -11 17 -18 12 -18 6 C -18 0 -16 -5 -11 -10 L -7 -14 Z"
-      fill="none" stroke="#E8DCC4" stroke-width="2.5" stroke-linejoin="round"/>
-    <line x1="-7" y1="-18" x2="7" y2="-18" stroke="#E8DCC4" stroke-width="3.5" stroke-linecap="round"/>
+  <rect width="64" height="64" rx="14" fill="#0a1f3a"/>
+  <g transform="translate(32 32)" fill="none" stroke="#e8dcc0" stroke-linecap="round">
+    <ellipse cx="0" cy="8" rx="5" ry="1.6" stroke-width="1.6" opacity="0.95"/>
+    <ellipse cx="0" cy="8" rx="13" ry="3.6" stroke-width="1.3" opacity="0.7"/>
+    <ellipse cx="0" cy="8" rx="22" ry="6" stroke-width="1" opacity="0.45"/>
+    <ellipse cx="0" cy="8" rx="30" ry="8" stroke-width="0.7" opacity="0.22"/>
+    <circle cx="0" cy="8" r="1.6" fill="#e8dcc0" stroke="none"/>
+    <circle cx="0" cy="-18" r="1.4" fill="#e8dcc0" stroke="none"/>
+    <line x1="0" y1="-18" x2="0" y2="4" stroke-width="0.6" stroke-dasharray="1 3" opacity="0.45"/>
   </g>
 </svg>
