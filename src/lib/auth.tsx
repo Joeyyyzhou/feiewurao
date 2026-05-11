@@ -19,17 +19,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserRow | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function loadProfile(userId: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    if (error) {
-      console.warn('[auth] load profile failed:', error.message);
+  async function loadProfile(_userId: string) {
+    // 用 SECURITY DEFINER 的 create_profile RPC：已存在则返回现有 profile
+    // 比 from('users').select 更稳健（绕开 session 边缘 case）
+    try {
+      const { data, error } = await supabase.rpc('create_profile' as any);
+      if (error) {
+        console.warn('[auth] load profile failed:', error.message);
+        return null;
+      }
+      return data as UserRow;
+    } catch (e) {
+      console.warn('[auth] load profile threw:', e);
       return null;
     }
-    return data as UserRow;
   }
 
   async function refreshProfile() {
