@@ -19,18 +19,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserRow | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function loadProfile(_userId: string) {
-    // 用 SECURITY DEFINER 的 create_profile RPC：已存在则返回现有 profile
-    // 比 from('users').select 更稳健（绕开 session 边缘 case）
+  async function loadProfile(userId: string): Promise<UserRow | null> {
+    // 双路径：优先用 SELECT（最简单、RLS 允许查自己）；如果 SELECT 拿不到再用 RPC 尝试建/取 profile
+    // 每个调用 3 秒超时，避免 hang 死
+    const withTimeout = <T,>(p: PromiseLike<T>, ms: number): Promise<T> =>
+      Promise.race<T>([
+        Promise.resolve(p),
+        new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout ' + ms + 'ms')), ms)),
+      ]);
+
+    // 路径 1: 直接查 users 表（profile 已存在的 99% 情况）
     try {
-      const { data, error } = await supabase.rpc('create_profile' as any);
-      if (error) {
-        console.warn('[auth] load profile failed:', error.message);
+      const res: any = await withTimeout(
+        supabase.from('users').select('*').eq('id', userId).maybeSingle(),
+        3000
+      );
+      if (!res.error && res.data) {
+        return res.data as UserRow;
+      }
+      if (res.error) {
+        console.warn('[auth] select profile error:', res.error.message);
+      }
+    } catch (e: any) {
+      console.warn('[auth] select profile timeout/threw:', e.message);
+    }
+
+    // 路径 2: SELECT 没拿到 → 调 RPC（首次注册/profile 缺失的情况）
+    try {
+      const res: any = await withTimeout(
+        supabase.rpc('create_profile' as any),
+        3000
+      );
+      if (res.error) {
+        console.warn('[auth] create_profile rpc error:', res.error.message);
         return null;
       }
-      return data as UserRow;
-    } catch (e) {
-      console.warn('[auth] load profile threw:', e);
+      return res.data as UserRow;
+    } catch (e: any) {
+      console.warn('[auth] create_profile rpc timeout/threw:', e.message);
       return null;
     }
   }
