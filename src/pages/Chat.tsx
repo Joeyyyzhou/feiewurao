@@ -76,6 +76,19 @@ export default function Chat() {
     const text = input.trim();
     setInput('');
     try {
+      // 敏感词预检（Edge Function 失败时不阻塞）
+      try {
+        const { data: scan } = await supabase.functions.invoke('sensitive-check', {
+          body: { content: text },
+        });
+        if (scan?.sensitive) {
+          setInput(text);
+          toast.error('内容可能违反社区规则，请修改后再发送');
+          return;
+        }
+      } catch {
+        // ignore
+      }
       const { error } = await supabase.from('messages').insert({
         conversation_id: conversationId,
         sender_id: profile.id,
@@ -84,11 +97,7 @@ export default function Chat() {
       });
       if (error) {
         setInput(text);
-        if (error.message.includes('sensitive')) {
-          toast.error('内容可能违反社区规则，请修改后再发送');
-        } else {
-          toast.error('消息发送失败：' + error.message);
-        }
+        toast.error('消息发送失败：' + error.message);
       }
     } catch (e: any) {
       setInput(text);

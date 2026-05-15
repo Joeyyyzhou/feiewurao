@@ -59,17 +59,25 @@ export default function Pick() {
   async function sendReply() {
     if (!bottle || !replyText.trim()) return;
     try {
+      // 敏感词检查（Edge Function 失败时不阻塞）
+      try {
+        const { data: scan } = await supabase.functions.invoke('sensitive-check', {
+          body: { content: replyText.trim() },
+        });
+        if (scan?.sensitive) {
+          toast.error('回信内容可能违反社区规则，请修改后再发送');
+          return;
+        }
+      } catch {
+        // ignore, RPC 不会再做敏感词检查（已回退）
+      }
       const { error } = await supabase.rpc('submit_reply' as any, {
         p_bottle_id: bottle.id,
         p_content: replyText.trim(),
         p_reply_mood: replyMood,
       });
       if (error) {
-        if (error.message.includes('sensitive')) {
-          toast.error('回信内容可能违反社区规则，请修改后再发送');
-        } else {
-          toast.error('回信发送失败：' + error.message);
-        }
+        toast.error('回信发送失败：' + error.message);
         return;
       }
       setOverlay('reply');
