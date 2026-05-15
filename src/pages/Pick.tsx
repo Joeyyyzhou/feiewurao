@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import BgVideo from '../components/BgVideo';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
+import { useToast } from '../components/Toast';
 import type { ReplyMood } from '../lib/database.types';
 
 const REPLY_MOODS: ReplyMood[] = ['同感', '抱抱', '陪你', '听着', '打气', '路过', '冒泡', '辛苦'];
@@ -17,6 +18,7 @@ interface PickedBottle {
 
 export default function Pick() {
   const { profile } = useAuth();
+  const toast = useToast();
   const nav = useNavigate();
   const [bottle, setBottle] = useState<PickedBottle | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,32 +58,53 @@ export default function Pick() {
 
   async function sendReply() {
     if (!bottle || !replyText.trim()) return;
-    const { error } = await supabase.rpc('submit_reply' as any, {
-      p_bottle_id: bottle.id,
-      p_content: replyText.trim(),
-      p_reply_mood: replyMood,
-    });
-    if (error) { setPickErr(error.message); return; }
-    setOverlay('reply');
-    setTimeout(() => nav('/sea?fromReply=1'), 2200);
+    try {
+      const { error } = await supabase.rpc('submit_reply' as any, {
+        p_bottle_id: bottle.id,
+        p_content: replyText.trim(),
+        p_reply_mood: replyMood,
+      });
+      if (error) {
+        if (error.message.includes('sensitive')) {
+          toast.error('回信内容可能违反社区规则，请修改后再发送');
+        } else {
+          toast.error('回信发送失败：' + error.message);
+        }
+        return;
+      }
+      setOverlay('reply');
+      setTimeout(() => nav('/sea?fromReply=1'), 2200);
+    } catch (e: any) {
+      toast.error('网络异常，请稍后重试');
+    }
   }
   async function tossBack() {
     if (!bottle) return;
-    await supabase.rpc('toss_bottle' as any, { p_bottle_id: bottle.id });
-    setOverlay('toss');
-    setTimeout(() => nav('/sea'), 2200);
+    try {
+      const { error } = await supabase.rpc('toss_bottle' as any, { p_bottle_id: bottle.id });
+      if (error) { toast.error('放回失败：' + error.message); return; }
+      setOverlay('toss');
+      setTimeout(() => nav('/sea'), 2200);
+    } catch (e: any) {
+      toast.error('网络异常，请稍后重试');
+    }
   }
   async function submitReport() {
     if (!bottle || !reportReason || !profile) return;
-    await supabase.from('reports').insert({
-      reporter: profile.id,
-      bottle_id: bottle.id,
-      message_id: null,
-      reason: reportReason as any,
-    });
-    setReportOpen(false);
-    setOverlay('report');
-    setTimeout(() => nav('/sea'), 2400);
+    try {
+      const { error } = await supabase.from('reports').insert({
+        reporter: profile.id,
+        bottle_id: bottle.id,
+        message_id: null,
+        reason: reportReason as any,
+      });
+      if (error) { toast.error('举报失败：' + error.message); return; }
+      setReportOpen(false);
+      setOverlay('report');
+      setTimeout(() => nav('/sea'), 2400);
+    } catch (e: any) {
+      toast.error('网络异常，请稍后重试');
+    }
   }
 
   return (

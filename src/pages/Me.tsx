@@ -5,9 +5,11 @@ import AppNav from '../components/AppNav';
 import Avatar from '../components/Avatar';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
+import { useToast } from '../components/Toast';
 
 export default function Me() {
   const { profile, signOut, user } = useAuth();
+  const toast = useToast();
   const nav = useNavigate();
   const [stats, setStats] = useState({ thrown: 0, picked: 0, friends: 0 });
   const [sheet, setSheet] = useState<'privacy' | 'block' | 'logout' | 'delete' | null>(null);
@@ -37,7 +39,10 @@ export default function Me() {
         .eq('blocker', profile.id)
         .order('created_at', { ascending: false });
       if (blocks && blocks.length > 0) {
-        const { data: users } = await supabase.rpc('get_blocked_profiles' as any);
+        const { data: users, error: rpcErr } = await supabase.rpc('get_blocked_profiles' as any);
+        if (rpcErr) {
+          console.warn('[me] get_blocked_profiles error:', rpcErr.message);
+        }
         const userMap = new Map<string, string>((users ?? []).map((u: any) => [u.id as string, u.bottle_no as string]));
         if (cancelled) return;
         setBlockList((blocks as any[]).map(b => ({
@@ -51,8 +56,14 @@ export default function Me() {
   }, [profile]);
 
   async function unblock(blockId: string) {
-    await supabase.from('blocks').delete().eq('id', blockId);
-    setBlockList(list => list.filter(b => b.id !== blockId));
+    try {
+      const { error } = await supabase.from('blocks').delete().eq('id', blockId);
+      if (error) { toast.error('解除拉黑失败：' + error.message); return; }
+      setBlockList(list => list.filter(b => b.id !== blockId));
+      toast.success('已解除拉黑');
+    } catch (e: any) {
+      toast.error('网络异常，请稍后重试');
+    }
   }
 
   const emailMasked = (user?.email ?? '').replace(/^(.{2}).*?(@.+)$/, '$1****$2');
@@ -103,10 +114,13 @@ export default function Me() {
           {sheet === 'logout' && <LogoutContent onConfirm={async () => { await signOut(); nav('/'); }} onCancel={() => setSheet(null)} />}
           {sheet === 'delete' && <DeleteContent onConfirm={async () => {
             if (profile) {
-              // 删除用户 = 触发级联（auth.users 删 → public.users 级联 → 瓶子/瓶友/消息全删）
-              // 这里调一个 RPC 或直接调 admin 删除（简易版：标记 banned，由后台清理）
-              // 简化：先 signOut 让用户离开，真物理删等后台脚本（避免误删）
-              await supabase.from('users').update({ banned_at: new Date().toISOString() }).eq('id', profile.id);
+              try {
+                const { error } = await supabase.from('users').update({ banned_at: new Date().toISOString() }).eq('id', profile.id);
+                if (error) { toast.error('注销失败：' + error.message); return; }
+              } catch (e: any) {
+                toast.error('网络异常，请稍后重试');
+                return;
+              }
             }
             await signOut();
             nav('/');

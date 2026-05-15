@@ -37,7 +37,7 @@ export default function Throw() {
       // 函数未部署：跳过，由 RPC 兜底
     }
 
-    // 2) 调 RPC throw_bottle（含每日额度检查）
+    // 2) 调 RPC throw_bottle（含每日额度检查 + 敏感词后端兜底）
     const { error } = await supabase.rpc('throw_bottle' as any, {
       p_content: content.trim(),
       p_mood: mood,
@@ -46,6 +46,8 @@ export default function Throw() {
     if (error) {
       if (error.message.includes('quota')) {
         setErr('今天的 3 次扔瓶机会已用完，明天再来吧。');
+      } else if (error.message.includes('sensitive')) {
+        setWarn(true);
       } else {
         setErr(error.message);
       }

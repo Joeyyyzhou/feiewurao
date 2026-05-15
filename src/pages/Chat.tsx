@@ -3,11 +3,13 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import BgVideo from '../components/BgVideo';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
+import { useToast } from '../components/Toast';
 import type { MessageRow } from '../lib/database.types';
 
 export default function Chat() {
   const { conversationId } = useParams();
   const { profile } = useAuth();
+  const toast = useToast();
   const loc = useLocation();
   const nav = useNavigate();
   const ended = loc.search.includes('ended=1');
@@ -73,28 +75,48 @@ export default function Chat() {
     if (!input.trim() || !conversationId || !profile) return;
     const text = input.trim();
     setInput('');
-    const { error } = await supabase.from('messages').insert({
-      conversation_id: conversationId,
-      sender_id: profile.id,
-      content: text,
-      reply_mood: null,
-    });
-    if (error) {
-      // 失败回滚 input 让用户能重发
+    try {
+      const { error } = await supabase.from('messages').insert({
+        conversation_id: conversationId,
+        sender_id: profile.id,
+        content: text,
+        reply_mood: null,
+      });
+      if (error) {
+        setInput(text);
+        if (error.message.includes('sensitive')) {
+          toast.error('内容可能违反社区规则，请修改后再发送');
+        } else {
+          toast.error('消息发送失败：' + error.message);
+        }
+      }
+    } catch (e: any) {
       setInput(text);
-      console.error('send failed:', error.message);
+      toast.error('网络异常，请稍后重试');
     }
     // 自己发的也通过 Realtime 回流，避免重复 setState
   }
   async function endChat() {
     if (!conversationId) return;
-    await supabase.rpc('end_conversation' as any, { p_conv_id: conversationId });
-    nav('/friends');
+    try {
+      const { error } = await supabase.rpc('end_conversation' as any, { p_conv_id: conversationId });
+      if (error) { toast.error('结束失败：' + error.message); return; }
+      toast.success('已结束这段漂流');
+      nav('/friends');
+    } catch (e: any) {
+      toast.error('网络异常，请稍后重试');
+    }
   }
   async function blockTA() {
     if (!profile || !otherUserId) { nav('/friends'); return; }
-    await supabase.from('blocks').insert({ blocker: profile.id, blocked: otherUserId });
-    nav('/friends');
+    try {
+      const { error } = await supabase.from('blocks').insert({ blocker: profile.id, blocked: otherUserId });
+      if (error) { toast.error('拉黑失败：' + error.message); return; }
+      toast.success('已拉黑 TA');
+      nav('/friends');
+    } catch (e: any) {
+      toast.error('网络异常，请稍后重试');
+    }
   }
 
   return (
