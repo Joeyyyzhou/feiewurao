@@ -1,35 +1,28 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/auth';
 import BgVideo from '../components/BgVideo';
 import AboutDrawer from '../components/AboutDrawer';
 
-type Stage = 'form' | 'wait-email' | 'verifying';
+type Stage = 'form' | 'wait-email';
 
 export default function Register() {
   const nav = useNavigate();
+  const { session, loading } = useAuth();
   const [stage, setStage] = useState<Stage>('form');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // session 监听：用户从邮件回来后，session 会建立 → 调 create_profile → 进站
+  // 已经登录的用户（包括邮件链接回来后 session 已建立）→ 直接进站
+  // profile 由 auth.tsx 的 loadProfile 全局负责，这里不重复调用 create_profile
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event: any, s: any) => {
-      if (s?.user?.email_confirmed_at || s?.user?.confirmed_at) {
-        setStage('verifying');
-        const { error } = await supabase.rpc('create_profile');
-        if (error) {
-          setErr('建账号失败：' + error.message);
-          setStage('form');
-          return;
-        }
-        nav('/');
-      }
-    });
-    return () => sub.subscription.unsubscribe();
-  }, [nav]);
+    if (!loading && session?.user) {
+      nav('/', { replace: true });
+    }
+  }, [loading, session, nav]);
 
   async function submit() {
     setErr(null);
@@ -52,11 +45,8 @@ export default function Register() {
         setStage('wait-email');
         return;
       }
-      // 已确认 → 建/取 profile 后进站
-      const { error: profErr } = await supabase.rpc('create_profile');
+      // 已确认 → session 已建立，上面的 useEffect 会自动 nav('/')
       setSubmitting(false);
-      if (profErr) { setErr(profErr.message); return; }
-      nav('/');
       return;
     }
 
@@ -151,12 +141,6 @@ export default function Register() {
                 await supabase.auth.resend({ type: 'signup', email });
                 alert('已重新发送，请稍等几秒查看邮箱');
               }}>重发邮件</button>
-            </div>
-          )}
-
-          {stage === 'verifying' && (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.7)' }}>
-              邮箱验证通过，正在为你分配编号…
             </div>
           )}
         </div>
