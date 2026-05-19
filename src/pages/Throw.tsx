@@ -54,14 +54,14 @@ export default function Throw() {
       return;
     }
     setOverlay(true);
-    setTimeout(() => nav('/sea'), 2200);
+    setTimeout(() => nav('/'), 2200);
   }
 
   return (
     <>
       <BgVideo />
       <div style={immersiveBar}>
-        <Link to="/sea" style={backStyle}>← 回到海面</Link>
+        <Link to="/" style={backStyle}>← 回到海面</Link>
       </div>
 
       <main style={pageStyle}>

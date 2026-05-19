@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import App from './App';
-import Landing from './pages/Landing';
 import Register from './pages/Register';
 import Sea from './pages/Sea';
 import Friends from './pages/Friends';
@@ -22,8 +21,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<App />}>
-              <Route index element={<Landing />} />
+              {/* 首页 = 海。未登录会被 RequireAuth 拦到 /register */}
+              <Route index element={<RequireAuth><Sea /></RequireAuth>} />
               <Route path="register" element={<Register />} />
+              {/* /sea 兼容旧链接（fromReply 等会带 query 跳转到这里），保留 */}
               <Route path="sea" element={<RequireAuth><Sea /></RequireAuth>} />
               <Route path="friends" element={<RequireAuth><Friends /></RequireAuth>} />
               <Route path="me" element={<RequireAuth><Me /></RequireAuth>} />

@@ -10,6 +10,6 @@ export default function RequireAuth({ children }: { children: JSX.Element }) {
       </div>
     );
   }
-  if (!session) return <Navigate to="/" replace />;
+  if (!session) return <Navigate to="/register" replace />;
   return children;
 }

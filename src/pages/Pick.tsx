@@ -81,7 +81,7 @@ export default function Pick() {
         return;
       }
       setOverlay('reply');
-      setTimeout(() => nav('/sea?fromReply=1'), 2200);
+      setTimeout(() => nav('/?fromReply=1'), 2200);
     } catch (e: any) {
       toast.error('网络异常，请稍后重试');
     }
@@ -92,7 +92,7 @@ export default function Pick() {
       const { error } = await supabase.rpc('toss_bottle' as any, { p_bottle_id: bottle.id });
       if (error) { toast.error('放回失败：' + error.message); return; }
       setOverlay('toss');
-      setTimeout(() => nav('/sea'), 2200);
+      setTimeout(() => nav('/'), 2200);
     } catch (e: any) {
       toast.error('网络异常，请稍后重试');
     }
@@ -109,7 +109,7 @@ export default function Pick() {
       if (error) { toast.error('举报失败：' + error.message); return; }
       setReportOpen(false);
       setOverlay('report');
-      setTimeout(() => nav('/sea'), 2400);
+      setTimeout(() => nav('/'), 2400);
     } catch (e: any) {
       toast.error('网络异常，请稍后重试');
     }
@@ -119,7 +119,7 @@ export default function Pick() {
     <>
       <BgVideo />
       <div style={immersiveBar}>
-        <Link to="/sea" style={backStyle}>← 回到海面</Link>
+        <Link to="/" style={backStyle}>← 回到海面</Link>
       </div>
 
       <main style={pageStyle}>
@@ -130,7 +130,7 @@ export default function Pick() {
             ) : !bottle ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.5)' }}>
                 {pickErr ? (<>{pickErr}</>) : (<>海里暂时没有适合你的瓶子。<br/>过一会儿再来试试？</>)}
-                <div style={{ marginTop: 24 }}><Link to="/sea" className="btn btn-ghost">回到海面</Link></div>
+                <div style={{ marginTop: 24 }}><Link to="/" className="btn btn-ghost">回到海面</Link></div>
               </div>
             ) : (
               <>

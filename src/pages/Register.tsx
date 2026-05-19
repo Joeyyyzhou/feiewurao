@@ -24,7 +24,7 @@ export default function Register() {
           setStage('form');
           return;
         }
-        nav('/sea');
+        nav('/');
       }
     });
     return () => sub.subscription.unsubscribe();
@@ -55,7 +55,7 @@ export default function Register() {
       const { error: profErr } = await supabase.rpc('create_profile');
       setSubmitting(false);
       if (profErr) { setErr(profErr.message); return; }
-      nav('/sea');
+      nav('/');
       return;
     }
 

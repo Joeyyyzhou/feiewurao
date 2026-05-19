@@ -84,7 +84,7 @@ export default function Friends() {
         {!loading && friends.length === 0 && (
           <div style={{ textAlign: 'center', marginTop: 80, padding: '60px 20px', fontSize: 14, color: 'rgba(255,255,255,0.5)', letterSpacing: 4 }}>
             还没有瓶友。<br/>
-            <Link to="/sea" style={{ color: 'rgba(255,255,255,0.85)', borderBottom: '0.5px solid rgba(255,255,255,0.4)', textDecoration: 'none', marginTop: 16, display: 'inline-block' }}>去海边看看 →</Link>
+            <Link to="/" style={{ color: 'rgba(255,255,255,0.85)', borderBottom: '0.5px solid rgba(255,255,255,0.4)', textDecoration: 'none', marginTop: 16, display: 'inline-block' }}>去海边看看 →</Link>
           </div>
         )}
 
