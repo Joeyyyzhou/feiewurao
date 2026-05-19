@@ -85,13 +85,19 @@ export default function AboutDrawer() {
           boxShadow: '-24px 0 48px rgba(0,0,0,0.25), inset 1px 0 0 rgba(255,255,255,0.18)',
           transform: open ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform .42s cubic-bezier(.22,.61,.36,1)',
-          overflow: 'auto',
+          overflow: 'hidden',
           color: '#fff',
+          display: 'flex', flexDirection: 'column',
         }}
       >
-        <div style={{ padding: '32px 44px', position: 'sticky', top: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        {/* 头部 — 真·固定在抽屉顶部，不随内容滚动 */}
+        <div style={{
+          flexShrink: 0,
+          padding: '32px 44px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           background: 'linear-gradient(180deg, rgba(70,100,135,0.55) 0%, rgba(70,100,135,0.15) 100%)',
           backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
           borderBottom: '0.5px solid rgba(255,255,255,0.18)',
         }}>
           <div>
@@ -110,14 +116,32 @@ export default function AboutDrawer() {
           >×</button>
         </div>
 
-        <div style={{ padding: '12px 44px 64px' }}>
+        {/* 滚动内容区 */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '44px 44px 64px' }}>
           <Card num="01" en="why this sea exists" title="为什么会有这片海">
-            <p style={{ marginBottom: 14 }}>鹅厂的人都是说话的高手。</p>
-            <p style={{ marginBottom: 14 }}>但有时候想说一句"今天有点累"——</p>
-            <Verse>发朋友圈不合适，<br/>跟谁讲又觉得太矫情。</Verse>
-            <p style={{ marginTop: 14, marginBottom: 0 }}>
-              <strong>非鹅勿扰</strong>是 <strong>QQ 邮箱漂流瓶</strong>在 2026 年的一次<strong>文艺复兴</strong>——
-              一个不用想这些的地方。
+            <p style={{ marginBottom: 18 }}>2010 年前后，QQ 邮箱里有一片海。</p>
+            <p style={{ marginBottom: 18 }}>
+              那时候我还在上小学，<br/>
+              不需要做 PPT，<br/>
+              也没人问下一个里程碑是什么。<br/>
+              下课回家，打开邮箱，<br/>
+              写一句话扔进去，<br/>
+              第二天起来去捞一个回来。
+            </p>
+            <p style={{ marginBottom: 18 }}>
+              瓶子里有陌生人的失恋、喜悦、阳台外的雨，<br/>
+              也有自己藏了很久没敢讲的事。
+            </p>
+            <Verse>海很大，<br/>我很小，<br/>但那一刻，谁也不孤单。</Verse>
+            <p style={{ marginTop: 18, marginBottom: 18 }}>
+              后来海被关掉了，<br/>
+              我也长大了，进了大厂，开了周会，<br/>
+              学会了把话留在心里。
+            </p>
+            <p style={{ marginBottom: 0 }}>
+              2026 年，<strong>非鹅勿扰</strong>，<br/>
+              是给所有还记得那片海的人，<br/>
+              也是给从没见过它的人。
             </p>
           </Card>
 
@@ -182,7 +206,7 @@ function Card({ num, en, title, children }: { num: string; en: string; title: st
           <div style={{ fontSize: 18, color: '#fff', letterSpacing: 3, fontFamily: '"Source Han Serif CN VF Medium", serif', textShadow: '0 1px 6px rgba(0,0,0,0.35)' }}>{title}</div>
         </div>
       </div>
-      <div style={{ fontSize: 14.5, lineHeight: 1.95, color: 'rgba(255,255,255,0.95)', letterSpacing: 1, fontFamily: '"Source Han Serif CN VF Light", serif', textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
+      <div style={{ fontSize: 14.5, lineHeight: 2.15, color: 'rgba(255,255,255,0.95)', letterSpacing: 1.5, fontFamily: '"Source Han Serif CN VF Light", serif', textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
         {children}
       </div>
     </div>
@@ -201,7 +225,7 @@ function FlowDiagram() {
   // 漂流瓶完整旅程：写信 → 扔瓶 → 海里随机 → 被人捞起 → 回信(成瓶友) / 放回海(继续漂)
   return (
     <div style={{ marginTop: 14 }}>
-      <svg viewBox="0 0 460 220" width="100%" style={{ display: 'block' }} aria-label="漂流瓶流程">
+      <svg viewBox="0 0 480 220" width="100%" style={{ display: 'block' }} aria-label="漂流瓶流程">
         <defs>
           <linearGradient id="seaGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="rgba(255,255,255,0.10)" />
@@ -261,26 +285,27 @@ function FlowDiagram() {
         <path d="M294 108 Q 330 90 364 56" stroke="rgba(255,255,255,0.85)" strokeWidth="1" fill="none" markerEnd="url(#arrow)" strokeDasharray="4 3" />
 
         {/* 分叉：回信 / 放回海 */}
-        <line x1="388" y1="68" x2="388" y2="120" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
-        <line x1="388" y1="120" x2="324" y2="120" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
-        <line x1="388" y1="120" x2="436" y2="120" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
-        <polygon points="324,120 330,116 330,124" fill="rgba(255,255,255,0.85)" />
-        <polygon points="436,120 430,116 430,124" fill="rgba(255,255,255,0.85)" />
+        <line x1="388" y1="68" x2="388" y2="118" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
+        <line x1="240" y1="118" x2="436" y2="118" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
+        <line x1="270" y1="118" x2="270" y2="138" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
+        <line x1="406" y1="118" x2="406" y2="138" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
+        <polygon points="270,140 266,134 274,134" fill="rgba(255,255,255,0.85)" />
+        <polygon points="406,140 402,134 410,134" fill="rgba(255,255,255,0.85)" />
 
-        {/* 终点 A：回信 → 成瓶友 */}
+        {/* 终点 A：回信 → 成瓶友（左下） */}
         <g>
-          <rect x="266" y="138" width="116" height="56" rx="8"
+          <rect x="206" y="142" width="128" height="56" rx="8"
                 fill="rgba(255, 195, 100, 0.18)" stroke="rgba(255, 215, 150, 0.65)" strokeWidth="0.7" />
-          <text x="324" y="160" fill="#ffd89a" fontSize="12" textAnchor="middle" letterSpacing="2" fontWeight="500">回信</text>
-          <text x="324" y="180" fill="rgba(255,235,200,0.95)" fontSize="10.5" textAnchor="middle" letterSpacing="1.5">成为「瓶友」</text>
+          <text x="270" y="164" fill="#ffd89a" fontSize="12" textAnchor="middle" letterSpacing="2" fontWeight="500">回信</text>
+          <text x="270" y="184" fill="rgba(255,235,200,0.95)" fontSize="10.5" textAnchor="middle" letterSpacing="1.5">成为「瓶友」</text>
         </g>
 
-        {/* 终点 B：放回 → 继续漂 */}
+        {/* 终点 B：放回 → 继续漂（右下） */}
         <g>
-          <rect x="378" y="138" width="80" height="56" rx="8"
+          <rect x="342" y="142" width="128" height="56" rx="8"
                 fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.45)" strokeWidth="0.5" strokeDasharray="3 3" />
-          <text x="418" y="160" fill="rgba(255,255,255,0.92)" fontSize="12" textAnchor="middle" letterSpacing="2">放回海</text>
-          <text x="418" y="180" fill="rgba(255,255,255,0.7)" fontSize="10.5" textAnchor="middle" letterSpacing="1">瓶子继续漂</text>
+          <text x="406" y="164" fill="rgba(255,255,255,0.92)" fontSize="12" textAnchor="middle" letterSpacing="2">放回海</text>
+          <text x="406" y="184" fill="rgba(255,255,255,0.7)" fontSize="10.5" textAnchor="middle" letterSpacing="1.5">瓶子继续漂</text>
         </g>
       </svg>
 
@@ -327,7 +352,7 @@ function PrinciplesIcons() {
         </svg>
       ),
       title: '平台克制',
-      desc: '不算法、不推荐、不打扰对话。',
+      desc: '不做算法推荐，不打扰对话。',
     },
     {
       icon: (
