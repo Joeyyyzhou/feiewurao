@@ -112,21 +112,22 @@ export default function AboutDrawer() {
 
         <div style={{ padding: '12px 44px 64px' }}>
           <Card num="01" en="why this sea exists" title="为什么会有这片海">
-            <p>鹅厂的人，都是说话的高手。</p>
-            <p>周会上能讲明白复杂项目，PRD 评审能 hold 住十个角色，绩效面谈能滴水不漏。</p>
-            <p>可有时候，想发一句"今天有点累"——</p>
-            <Verse>发朋友圈不合适，<br/>跟谁讲又觉得太矫情，<br/>想了想，又删了。</Verse>
-            <p><strong>非鹅勿扰</strong>，是一个不用想这些的地方。</p>
-            <p>它的灵感，来自很多人记忆里的 <strong>QQ 邮箱漂流瓶</strong>——是它在 2026 年的一次<strong>文艺复兴</strong>。</p>
+            <p style={{ marginBottom: 14 }}>鹅厂的人都是说话的高手。</p>
+            <p style={{ marginBottom: 14 }}>但有时候想说一句"今天有点累"——</p>
+            <Verse>发朋友圈不合适，<br/>跟谁讲又觉得太矫情。</Verse>
+            <p style={{ marginTop: 14, marginBottom: 0 }}>
+              <strong>非鹅勿扰</strong>是 <strong>QQ 邮箱漂流瓶</strong>在 2026 年的一次<strong>文艺复兴</strong>——
+              一个不用想这些的地方。
+            </p>
           </Card>
 
           <Card num="02" en="how to play" title="怎么玩漂流瓶">
-            <p>每天 3 次扔瓶机会，3 次捞瓶机会。</p>
-            <Steps />
+            <p style={{ marginBottom: 6, color: 'rgba(255,255,255,0.85)', fontSize: 13 }}>每天 3 次扔瓶 + 3 次捞瓶。</p>
+            <FlowDiagram />
           </Card>
 
           <Card num="03" en="principles & safety" title="我们想守护的边界">
-            <Principles />
+            <PrinciplesIcons />
           </Card>
 
           <div style={{
@@ -196,39 +197,165 @@ function Verse({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Steps() {
+function FlowDiagram() {
+  // 漂流瓶完整旅程：写信 → 扔瓶 → 海里随机 → 被人捞起 → 回信(成瓶友) / 放回海(继续漂)
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 14 }}>
-      <Step num="i" name="扔瓶" desc={<>写一段话<br/>匿名扔进海里</>} />
-      <Step num="ii" name="捞瓶" desc={<>随机捞起<br/>同事的瓶子</>} />
-      <Step num="iii" name="回信" desc={<>回信成瓶友<br/>不回放回海</>} />
+    <div style={{ marginTop: 14 }}>
+      <svg viewBox="0 0 460 220" width="100%" style={{ display: 'block' }} aria-label="漂流瓶流程">
+        <defs>
+          <linearGradient id="seaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.10)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
+          </linearGradient>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="rgba(255,255,255,0.85)" />
+          </marker>
+        </defs>
+
+        {/* 海面背景条 */}
+        <rect x="0" y="92" width="460" height="40" fill="url(#seaGrad)" />
+        <path d="M0 102 Q 30 96 60 102 T 120 102 T 180 102 T 240 102 T 300 102 T 360 102 T 420 102 T 480 102"
+              stroke="rgba(255,255,255,0.35)" strokeWidth="0.7" fill="none" />
+
+        {/* 节点 1：写信 */}
+        <g>
+          <circle cx="46" cy="44" r="22" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.7" />
+          {/* 信纸图标 */}
+          <rect x="36" y="34" width="20" height="18" rx="2" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1" />
+          <line x1="40" y1="40" x2="52" y2="40" stroke="rgba(255,255,255,0.95)" strokeWidth="0.8" />
+          <line x1="40" y1="44" x2="52" y2="44" stroke="rgba(255,255,255,0.95)" strokeWidth="0.8" />
+          <line x1="40" y1="48" x2="48" y2="48" stroke="rgba(255,255,255,0.95)" strokeWidth="0.8" />
+          <text x="46" y="86" fill="#fff" fontSize="11" textAnchor="middle" letterSpacing="2">写信</text>
+        </g>
+
+        {/* 节点 2：扔瓶进海 */}
+        <g>
+          <circle cx="160" cy="44" r="22" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.7" />
+          {/* 瓶子图标 */}
+          <path d="M156 32 L156 36 L154 38 L154 56 Q154 58 156 58 L164 58 Q166 58 166 56 L166 38 L164 36 L164 32 Z"
+                fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1" />
+          <rect x="155" y="46" width="10" height="6" fill="rgba(255,255,255,0.45)" />
+          <text x="160" y="86" fill="#fff" fontSize="11" textAnchor="middle" letterSpacing="2">匿名扔进海</text>
+        </g>
+
+        {/* 节点 3：海里漂流（中间是海） */}
+        <g>
+          <circle cx="274" cy="112" r="20" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.45)" strokeWidth="0.5" strokeDasharray="3 3" />
+          {/* 小波浪 */}
+          <path d="M262 112 q 4 -4 8 0 t 8 0 t 8 0" stroke="rgba(255,255,255,0.85)" strokeWidth="1" fill="none" />
+          <text x="274" y="148" fill="rgba(255,255,255,0.85)" fontSize="10.5" textAnchor="middle" letterSpacing="2" fontStyle="italic" fontFamily="'Cormorant Garamond', serif">drift…</text>
+        </g>
+
+        {/* 节点 4：随机被捞 */}
+        <g>
+          <circle cx="388" cy="44" r="22" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.7" />
+          {/* 手图标 */}
+          <path d="M380 50 L380 40 Q380 38 382 38 Q384 38 384 40 L384 36 Q384 34 386 34 Q388 34 388 36 L388 40 L388 34 Q388 32 390 32 Q392 32 392 34 L392 42 L392 36 Q392 34 394 34 Q396 34 396 36 L396 50 Q396 56 390 56 L384 56 Q380 56 380 50 Z"
+                fill="rgba(255,255,255,0.95)" />
+          <text x="388" y="86" fill="#fff" fontSize="11" textAnchor="middle" letterSpacing="2">随机被同事捞起</text>
+        </g>
+
+        {/* 箭头：写信 → 扔瓶 → 漂流 → 被捞 */}
+        <line x1="72" y1="44" x2="132" y2="44" stroke="rgba(255,255,255,0.85)" strokeWidth="1" markerEnd="url(#arrow)" />
+        <path d="M180 56 Q 218 90 254 108" stroke="rgba(255,255,255,0.85)" strokeWidth="1" fill="none" markerEnd="url(#arrow)" strokeDasharray="4 3" />
+        <path d="M294 108 Q 330 90 364 56" stroke="rgba(255,255,255,0.85)" strokeWidth="1" fill="none" markerEnd="url(#arrow)" strokeDasharray="4 3" />
+
+        {/* 分叉：回信 / 放回海 */}
+        <line x1="388" y1="68" x2="388" y2="120" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
+        <line x1="388" y1="120" x2="324" y2="120" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
+        <line x1="388" y1="120" x2="436" y2="120" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
+        <polygon points="324,120 330,116 330,124" fill="rgba(255,255,255,0.85)" />
+        <polygon points="436,120 430,116 430,124" fill="rgba(255,255,255,0.85)" />
+
+        {/* 终点 A：回信 → 成瓶友 */}
+        <g>
+          <rect x="266" y="138" width="116" height="56" rx="8"
+                fill="rgba(255, 195, 100, 0.18)" stroke="rgba(255, 215, 150, 0.65)" strokeWidth="0.7" />
+          <text x="324" y="160" fill="#ffd89a" fontSize="12" textAnchor="middle" letterSpacing="2" fontWeight="500">回信</text>
+          <text x="324" y="180" fill="rgba(255,235,200,0.95)" fontSize="10.5" textAnchor="middle" letterSpacing="1.5">成为「瓶友」</text>
+        </g>
+
+        {/* 终点 B：放回 → 继续漂 */}
+        <g>
+          <rect x="378" y="138" width="80" height="56" rx="8"
+                fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.45)" strokeWidth="0.5" strokeDasharray="3 3" />
+          <text x="418" y="160" fill="rgba(255,255,255,0.92)" fontSize="12" textAnchor="middle" letterSpacing="2">放回海</text>
+          <text x="418" y="180" fill="rgba(255,255,255,0.7)" fontSize="10.5" textAnchor="middle" letterSpacing="1">瓶子继续漂</text>
+        </g>
+      </svg>
+
+      <div style={{
+        marginTop: 12, fontSize: 11.5, lineHeight: 1.7, color: 'rgba(255,255,255,0.75)',
+        fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', textAlign: 'center', letterSpacing: 1.5,
+      }}>
+        no algorithm · no recommendation · just drift
+      </div>
     </div>
   );
 }
 
-function Step({ num, name, desc }: { num: string; name: string; desc: React.ReactNode }) {
-  return (
-    <div style={{ textAlign: 'center', padding: '14px 8px', background: 'rgba(255,255,255,0.12)', border: '0.5px solid rgba(255,255,255,0.25)', borderRadius: 10, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25)' }}>
-      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 18, color: 'rgba(255,255,255,0.92)' }}>{num}</div>
-      <div style={{ fontSize: 14, color: '#fff', letterSpacing: 2, margin: '4px 0 4px', fontWeight: 500 }}>{name}</div>
-      <div style={{ fontSize: 11.5, lineHeight: 1.6, color: 'rgba(255,255,255,0.92)' }}>{desc}</div>
-    </div>
-  );
-}
-
-function Principles() {
-  const items: [string, string][] = [
-    ['同温层', '仅限鹅厂员工，企业邮箱认证。'],
-    ['绝对匿名', '无昵称、无照片，每人一个随机编号。'],
-    ['平台克制', '不算法、不推荐、不打扰对话。'],
-    ['体面告别', '可随时结束漂流，记录双方保留。'],
+function PrinciplesIcons() {
+  const items: { icon: React.ReactNode; title: string; desc: string }[] = [
+    {
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M12 3 L20 7 V13 C20 17 16 20 12 21 C8 20 4 17 4 13 V7 Z"
+                stroke="rgba(255,255,255,0.95)" strokeWidth="1.2" fill="rgba(255,255,255,0.08)" />
+          <path d="M9 12 L11 14 L15 10" stroke="rgba(255,255,255,0.95)" strokeWidth="1.2" fill="none" />
+        </svg>
+      ),
+      title: '同温层',
+      desc: '仅限鹅厂员工，企业邮箱认证。',
+    },
+    {
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="8" stroke="rgba(255,255,255,0.95)" strokeWidth="1.2" fill="rgba(255,255,255,0.08)" />
+          <text x="12" y="15.5" fill="rgba(255,255,255,0.95)" fontSize="9" textAnchor="middle" fontFamily="'Cormorant Garamond', serif" fontStyle="italic">No.</text>
+        </svg>
+      ),
+      title: '绝对匿名',
+      desc: '无昵称、无照片，只有随机编号。',
+    },
+    {
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M5 12 H19" stroke="rgba(255,255,255,0.95)" strokeWidth="1.2" />
+          <circle cx="8" cy="12" r="2" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1.2" />
+          <circle cx="16" cy="12" r="2" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1.2" />
+          <line x1="4" y1="6" x2="20" y2="18" stroke="rgba(255,255,255,0.95)" strokeWidth="1.2" />
+        </svg>
+      ),
+      title: '平台克制',
+      desc: '不算法、不推荐、不打扰对话。',
+    },
+    {
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M5 18 Q12 8 19 18" stroke="rgba(255,255,255,0.95)" strokeWidth="1.2" fill="none" />
+          <circle cx="12" cy="11" r="2.5" fill="rgba(255,255,255,0.85)" />
+        </svg>
+      ),
+      title: '体面告别',
+      desc: '可随时结束漂流，记录双方保留。',
+    },
   ];
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginTop: 14 }}>
-      {items.map(([n, d]) => (
-        <div key={n} style={{ padding: '12px 16px', background: 'rgba(255,255,255,0.12)', borderLeft: '2px solid rgba(255,255,255,0.75)', borderRadius: 4 }}>
-          <div style={{ fontSize: 13, color: '#fff', letterSpacing: 2.5, marginBottom: 4, fontWeight: 500 }}>{n}</div>
-          <div style={{ fontSize: 12, lineHeight: 1.7, color: 'rgba(255,255,255,0.95)' }}>{d}</div>
+      {items.map((it) => (
+        <div key={it.title} style={{
+          padding: '14px 14px',
+          background: 'rgba(255,255,255,0.12)',
+          border: '0.5px solid rgba(255,255,255,0.28)',
+          borderRadius: 10,
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25)',
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+        }}>
+          <div style={{ flexShrink: 0, marginTop: 2 }}>{it.icon}</div>
+          <div>
+            <div style={{ fontSize: 13, color: '#fff', letterSpacing: 2.5, marginBottom: 4, fontWeight: 500 }}>{it.title}</div>
+            <div style={{ fontSize: 11.5, lineHeight: 1.6, color: 'rgba(255,255,255,0.92)' }}>{it.desc}</div>
+          </div>
         </div>
       ))}
     </div>
