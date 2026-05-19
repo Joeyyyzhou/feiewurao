@@ -1,18 +1,12 @@
 import { useEffect } from 'react';
 
-interface Props {
-  src?: string;
-  videoId?: string;
-}
-
-const VIDEO_BY_HOUR = (h: number): string => {
+const VIDEO_BY_HOUR = (_h: number): string => {
   // 4 个时段同 src（待 video skill 生原创后替换）
   return '/ocean-mediterranean.mp4';
 };
 
 export default function BgVideo() {
   useEffect(() => {
-    // 每分钟检查时段并切视频
     const v = document.querySelector<HTMLVideoElement>('#bg-video');
     if (!v) return;
     function tick() {
