@@ -69,23 +69,23 @@ export default function Sea() {
           {thrown >= 3 ? (
             <button className="btn btn-primary" disabled style={{ opacity: 0.4, cursor: 'not-allowed' }}>
               今日扔瓶已满
-              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, opacity: 0.55 }}>0 / 3</span>
+              <QuotaBadge n={0} dark />
             </button>
           ) : (
             <Link to="/throw" className="btn btn-primary">
               扔一个瓶子
-              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, opacity: 0.55 }}>{3 - thrown} / 3</span>
+              <QuotaBadge n={3 - thrown} dark />
             </Link>
           )}
           {picked >= 3 ? (
             <button className="btn btn-ghost" disabled style={{ opacity: 0.4, cursor: 'not-allowed' }}>
               今日捞瓶已满
-              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, opacity: 0.55 }}>0 / 3</span>
+              <QuotaBadge n={0} />
             </button>
           ) : (
             <Link to="/pick" className="btn btn-ghost">
               捞一个瓶子
-              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, opacity: 0.55 }}>{3 - picked} / 3</span>
+              <QuotaBadge n={3 - picked} />
             </Link>
           )}
         </div>
@@ -93,5 +93,30 @@ export default function Sea() {
 
       <AboutDrawer />
     </>
+  );
+}
+
+// 配额徽章 — 显眼版
+function QuotaBadge({ n, dark = false }: { n: number; dark?: boolean }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'baseline', gap: 2,
+      marginLeft: 6,
+      padding: '3px 12px',
+      borderRadius: 999,
+      background: dark ? 'rgba(26, 46, 69, 0.16)' : 'rgba(255, 255, 255, 0.22)',
+      border: dark ? '0.5px solid rgba(26, 46, 69, 0.25)' : '0.5px solid rgba(255, 255, 255, 0.45)',
+      fontFamily: "'Cormorant Garamond', serif",
+      fontStyle: 'italic',
+      fontSize: 18,
+      fontWeight: 500,
+      color: dark ? '#1a2e45' : '#fff',
+      letterSpacing: 0,
+      lineHeight: 1.1,
+    }}>
+      <em style={{ fontStyle: 'inherit' }}>{n}</em>
+      <span style={{ fontSize: 12, opacity: 0.55, margin: '0 1px' }}>/</span>
+      <em style={{ fontStyle: 'inherit', opacity: 0.7 }}>3</em>
+    </span>
   );
 }
