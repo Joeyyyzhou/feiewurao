@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import BgVideo from '../components/BgVideo';
+import AboutDrawer from '../components/AboutDrawer';
 
 type Stage = 'form' | 'wait-email' | 'verifying';
 
@@ -165,6 +166,7 @@ export default function Register() {
           邮箱仅用于登录，不与瓶子关联
         </div>
       </main>
+      <AboutDrawer />
     </>
   );
 }

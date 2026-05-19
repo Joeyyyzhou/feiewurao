@@ -1,56 +1,54 @@
 import { Link, useLocation } from 'react-router-dom';
-
-function RippleLogo({ size = 22 }: { size?: number }) {
-  return (
-    <svg
-      viewBox="0 0 64 64"
-      width={size}
-      height={size}
-      style={{ display: 'inline-block', verticalAlign: 'middle' }}
-      aria-hidden="true"
-    >
-      <g
-        transform="translate(32 32)"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-      >
-        <ellipse cx="0" cy="8" rx="5" ry="1.6" strokeWidth="1.6" opacity="0.95" />
-        <ellipse cx="0" cy="8" rx="13" ry="3.6" strokeWidth="1.3" opacity="0.7" />
-        <ellipse cx="0" cy="8" rx="22" ry="6" strokeWidth="1" opacity="0.45" />
-        <ellipse cx="0" cy="8" rx="30" ry="8" strokeWidth="0.7" opacity="0.22" />
-        <circle cx="0" cy="8" r="1.6" fill="currentColor" stroke="none" />
-        <circle cx="0" cy="-18" r="1.4" fill="currentColor" stroke="none" />
-        <line
-          x1="0" y1="-18" x2="0" y2="4"
-          strokeWidth="0.6"
-          strokeDasharray="1 3"
-          opacity="0.45"
-        />
-      </g>
-    </svg>
-  );
-}
+import { useEffect, useState } from 'react';
 
 export default function AppNav() {
   const loc = useLocation();
   const path = loc.pathname;
   const isSea = path === '/' || path === '/sea';
+
+  const [countdown, setCountdown] = useState({ h: '--', m: '--' });
+  useEffect(() => {
+    function tick() {
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(24, 0, 0, 0);
+      const diff = +next - +now;
+      setCountdown({
+        h: String(Math.floor(diff / 3600000)).padStart(2, '0'),
+        m: String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0'),
+      });
+    }
+    tick();
+    const id = setInterval(tick, 30000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <nav className="app-nav">
-      <Link
-        to="/"
-        className={`nav-link nav-brand ${isSea ? 'active' : ''}`}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
-      >
-        <RippleLogo size={22} />
-        <span>非鹅勿扰</span>
-      </Link>
       <div className="nav-tabs">
         <Link to="/" className={`nav-link ${isSea ? 'active' : ''}`}>海</Link>
         <Link to="/friends" className={`nav-link ${path === '/friends' ? 'active' : ''}`}>瓶友</Link>
         <Link to="/me" className={`nav-link ${path === '/me' ? 'active' : ''}`}>我</Link>
       </div>
+      <div style={{
+        marginLeft: 'auto',
+        fontFamily: '"Source Han Serif CN VF Light", serif',
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.55)',
+        letterSpacing: 3,
+        textShadow: '0 1px 6px rgba(0,0,0,0.45)',
+        whiteSpace: 'nowrap',
+      }}>
+        每日 <em style={emStyle}>0</em>:<em style={emStyle}>00</em> 重置 · 还有 <em style={emStyle}>{countdown.h}</em>:<em style={emStyle}>{countdown.m}</em> 刷新
+      </div>
     </nav>
   );
 }
+
+const emStyle: React.CSSProperties = {
+  fontFamily: "'Cormorant Garamond', serif",
+  fontStyle: 'italic',
+  color: 'rgba(255,255,255,0.78)',
+  margin: '0 2px',
+  fontSize: 13,
+};
