@@ -25,20 +25,45 @@ export default function Sea() {
 
   useEffect(() => {
     if (!profile) return;
+    let cancelled = false;
     const today = new Date().toISOString().slice(0, 10);
-    supabase
-      .from('quotas')
-      .select('thrown, picked')
-      .eq('user_id', profile.id)
-      .eq('date', today)
-      .maybeSingle()
-      .then(({ data }: any) => {
-        if (data) {
-          setThrown(data.thrown);
-          setPicked(data.picked);
-        }
-      });
-  }, [profile]);
+
+    const fetchQuota = () => {
+      supabase
+        .from('quotas')
+        .select('thrown, picked')
+        .eq('user_id', profile.id)
+        .eq('date', today)
+        .maybeSingle()
+        .then(({ data }: any) => {
+          if (cancelled) return;
+          if (data) {
+            setThrown(data.thrown);
+            setPicked(data.picked);
+          } else {
+            // 当天还没生成 quota 行，归零
+            setThrown(0);
+            setPicked(0);
+          }
+        });
+    };
+
+    // 初次加载
+    fetchQuota();
+
+    // 1) 路由变化（带 ?refresh=throw/toss/fromReply 回来）→ 重拉
+    //    loc 已在依赖里
+    // 2) 标签页重新可见 → 重拉（防止后台久了数据陈旧）
+    const onVisible = () => { if (!document.hidden) fetchQuota(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', fetchQuota);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchQuota);
+    };
+  }, [profile, loc.search, loc.key]);
 
   return (
     <>

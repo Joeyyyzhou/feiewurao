@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import BgVideo from '../components/BgVideo';
-import { supabase } from '../lib/supabase';
+import { supabase, invokeWithTimeout } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useToast } from '../components/Toast';
 import { useIsNarrow } from '../lib/useIsNarrow';
@@ -61,17 +61,11 @@ export default function Pick() {
   async function sendReply() {
     if (!bottle || !replyText.trim()) return;
     try {
-      // 敏感词检查（Edge Function 失败时不阻塞）
-      try {
-        const { data: scan } = await supabase.functions.invoke('sensitive-check', {
-          body: { content: replyText.trim() },
-        });
-        if (scan?.sensitive) {
-          toast.error('回信内容可能违反社区规则，请修改后再发送');
-          return;
-        }
-      } catch {
-        // ignore, RPC 不会再做敏感词检查（已回退）
+      // 敏感词检查（带超时，超时/未部署直接放过）
+      const { data: scan } = await invokeWithTimeout('sensitive-check', { content: replyText.trim() });
+      if (scan?.sensitive) {
+        toast.error('回信内容可能违反社区规则，请修改后再发送');
+        return;
       }
       const { error } = await supabase.rpc('submit_reply' as any, {
         p_bottle_id: bottle.id,
@@ -94,7 +88,7 @@ export default function Pick() {
       const { error } = await supabase.rpc('toss_bottle' as any, { p_bottle_id: bottle.id });
       if (error) { toast.error('放回失败：' + error.message); return; }
       setOverlay('toss');
-      setTimeout(() => nav('/'), 2200);
+      setTimeout(() => nav('/?refresh=toss'), 2200);
     } catch (e: any) {
       toast.error('网络异常，请稍后重试');
     }

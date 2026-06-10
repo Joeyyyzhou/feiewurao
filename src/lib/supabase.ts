@@ -17,3 +17,24 @@ export const supabase: any = createClient(url, anon, {
     detectSessionInUrl: true,
   },
 });
+
+/**
+ * 调用 Supabase Edge Function 时带超时保护。
+ * 用途：sensitive-check 等可选检查；超时/未部署都直接放过，由后端 RPC 兜底。
+ * @returns 成功返回 invoke 结果；超时/异常返回 { data: null, error: Error }
+ */
+export async function invokeWithTimeout(
+  name: string,
+  body: any,
+  timeoutMs = 2500
+): Promise<{ data: any; error: any }> {
+  try {
+    const invokePromise = supabase.functions.invoke(name, { body });
+    const timeoutPromise = new Promise((_, rej) =>
+      setTimeout(() => rej(new Error(`${name} timeout`)), timeoutMs)
+    );
+    return await Promise.race([invokePromise, timeoutPromise]) as any;
+  } catch (e) {
+    return { data: null, error: e };
+  }
+}

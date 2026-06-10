@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import BgVideo from '../components/BgVideo';
-import { supabase } from '../lib/supabase';
+import { supabase, invokeWithTimeout } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useIsNarrow } from '../lib/useIsNarrow';
 import type { Mood } from '../lib/database.types';
@@ -25,18 +25,13 @@ export default function Throw() {
     setWarn(false);
     setSubmitting(true);
 
-    // 1) 先尝试调敏感词 Edge Function（未部署也不阻塞）
-    try {
-      const { data: scan } = await supabase.functions.invoke('sensitive-check', {
-        body: { content: content.trim() },
-      });
-      if (scan?.sensitive) {
-        setSubmitting(false);
-        setWarn(true);
-        return;
-      }
-    } catch {
-      // 函数未部署：跳过，由 RPC 兜底
+    // 1) 先尝试调敏感词 Edge Function（**带 2.5 秒超时**，超时/未部署/任何异常都跳过，
+    //    交给 throw_bottle RPC 的后端兜底；避免 Edge Function 冷启动卡死前端）
+    const { data: scan } = await invokeWithTimeout('sensitive-check', { content: content.trim() });
+    if (scan?.sensitive) {
+      setSubmitting(false);
+      setWarn(true);
+      return;
     }
 
     // 2) 调 RPC throw_bottle（含每日额度检查 + 敏感词后端兜底）
@@ -56,7 +51,8 @@ export default function Throw() {
       return;
     }
     setOverlay(true);
-    setTimeout(() => nav('/'), 2200);
+    // 跳回首页时带 ?refresh=throw 让 Sea 刷新配额
+    setTimeout(() => nav('/?refresh=throw'), 2200);
   }
 
   return (
