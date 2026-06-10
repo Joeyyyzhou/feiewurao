@@ -93,7 +93,7 @@ export default function AboutDrawer() {
         {/* 头部 — 真·固定在抽屉顶部，不随内容滚动 */}
         <div style={{
           flexShrink: 0,
-          padding: '32px 44px',
+          padding: 'clamp(20px, 5vw, 32px) clamp(24px, 6vw, 44px)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           background: 'linear-gradient(180deg, rgba(70,100,135,0.55) 0%, rgba(70,100,135,0.15) 100%)',
           backdropFilter: 'blur(24px)',
@@ -117,7 +117,7 @@ export default function AboutDrawer() {
         </div>
 
         {/* 滚动内容区 */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '44px 44px 64px' }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: 'clamp(28px, 6vw, 44px) clamp(20px, 6vw, 44px) 64px' }}>
           <Card num="01" en="why this sea exists" title="为什么会有这片海">
             <p style={{ marginBottom: 18 }}>2010 年前后，QQ 邮箱里有一片海。</p>
             <p style={{ marginBottom: 18 }}>
@@ -195,7 +195,7 @@ function Card({ num, en, title, children }: { num: string; en: string; title: st
       WebkitBackdropFilter: 'blur(20px) saturate(1.3)',
       border: '0.5px solid rgba(255,255,255,0.28)',
       borderRadius: 14,
-      padding: '32px 32px',
+      padding: 'clamp(22px, 5vw, 32px) clamp(20px, 5vw, 32px)',
       marginBottom: CARD_GAP,
       boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.32)',
     }}>

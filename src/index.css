@@ -143,10 +143,32 @@ body {
 
 /* 移动端断点 */
 @media (max-width: 768px) {
-  .app-nav { padding: 18px 20px 14px; }
+  .app-nav {
+    padding: 14px 16px 12px;
+    gap: 12px;
+  }
   .nav-link { font-size: 13px; letter-spacing: 2px; }
-  .nav-link.active { font-size: 17px; letter-spacing: 3px; }
-  .nav-tabs { gap: 18px; }
-  .nav-tabs .nav-link.active { font-size: 18px; }
-  .btn { padding: 12px 28px; font-size: 14px; letter-spacing: 3px; }
+  .nav-link.active { font-size: 16px; letter-spacing: 2px; }
+  .nav-tabs { gap: 16px; }
+  .nav-tabs .nav-link.active { font-size: 17px; letter-spacing: 2px; }
+
+  /* 按钮：letter-spacing 大幅缩窄，避免「扔一个瓶子」5 字撑爆窄屏 */
+  .btn {
+    padding: 13px 24px;
+    font-size: 15px;
+    letter-spacing: 2px;
+    gap: 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .transition-text { font-size: 22px; letter-spacing: 4px; }
+  .transition-eyebrow { font-size: 12px; letter-spacing: 4px; }
+}
+
+/* 超窄屏（iPhone SE 等） */
+@media (max-width: 380px) {
+  .app-nav { padding: 12px 14px 10px; }
+  .nav-tabs { gap: 12px; }
+  .btn { padding: 12px 18px; font-size: 14px; letter-spacing: 1.5px; }
 }

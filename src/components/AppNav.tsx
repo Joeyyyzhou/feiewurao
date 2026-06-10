@@ -1,12 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { useIsNarrow } from '../lib/useIsNarrow';
 
 export default function AppNav() {
   const loc = useLocation();
   const path = loc.pathname;
   const isSea = path === '/' || path === '/sea';
+  const isNarrow = useIsNarrow();
 
   const [countdown, setCountdown] = useState({ h: '--', m: '--' });
+
   useEffect(() => {
     function tick() {
       const now = new Date();
@@ -33,13 +36,17 @@ export default function AppNav() {
       <div style={{
         marginLeft: 'auto',
         fontFamily: '"Source Han Serif CN VF Light", serif',
-        fontSize: 12,
+        fontSize: isNarrow ? 11 : 12,
         color: 'rgba(255,255,255,0.55)',
-        letterSpacing: 3,
+        letterSpacing: isNarrow ? 1.5 : 3,
         textShadow: '0 1px 6px rgba(0,0,0,0.45)',
         whiteSpace: 'nowrap',
       }}>
-        每日 <em style={emStyle}>0</em>:<em style={emStyle}>00</em> 重置 · 还有 <em style={emStyle}>{countdown.h}</em>:<em style={emStyle}>{countdown.m}</em> 刷新
+        {isNarrow ? (
+          <>还有 <em style={emStyle}>{countdown.h}</em>:<em style={emStyle}>{countdown.m}</em></>
+        ) : (
+          <>每日 <em style={emStyle}>0</em>:<em style={emStyle}>00</em> 重置 · 还有 <em style={emStyle}>{countdown.h}</em>:<em style={emStyle}>{countdown.m}</em> 刷新</>
+        )}
       </div>
     </nav>
   );

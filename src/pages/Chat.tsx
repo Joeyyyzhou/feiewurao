@@ -4,6 +4,7 @@ import BgVideo from '../components/BgVideo';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useToast } from '../components/Toast';
+import { useIsNarrow } from '../lib/useIsNarrow';
 import type { MessageRow } from '../lib/database.types';
 
 export default function Chat() {
@@ -19,6 +20,7 @@ export default function Chat() {
   const [otherNo, setOtherNo] = useState('----');
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isNarrow = useIsNarrow();
 
   // 加载消息 + 找到对方 + 订阅 Realtime
   useEffect(() => {
@@ -131,15 +133,23 @@ export default function Chat() {
   return (
     <>
       <BgVideo />
-      <div style={immersiveBar}>
+      <div style={{ ...immersiveBar, padding: isNarrow ? '20px 16px 14px' : '32px 56px 24px' }}>
         <Link to="/friends" style={backStyle}>← 瓶友</Link>
-        <div style={{ fontSize: 16, color: '#fff', letterSpacing: 6, textShadow: '0 1px 8px rgba(0,0,0,0.4)', fontFamily: '"Source Han Serif CN VF Medium", serif' }}>与 No.{otherNo} 的漂流</div>
+        <div style={{
+          fontSize: isNarrow ? 13 : 16,
+          color: '#fff',
+          letterSpacing: isNarrow ? 2 : 6,
+          textShadow: '0 1px 8px rgba(0,0,0,0.4)',
+          fontFamily: '"Source Han Serif CN VF Medium", serif',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          maxWidth: isNarrow ? '55vw' : 'none',
+        }}>与 No.{otherNo} 的漂流</div>
         <a onClick={() => setMenuOpen(!menuOpen)} style={{ fontSize: 16, color: 'rgba(255,255,255,0.85)', letterSpacing: 4, cursor: 'pointer' }}>⋯</a>
       </div>
 
       {menuOpen && (
         <div style={{
-          position: 'fixed', top: 76, right: 56, zIndex: 150,
+          position: 'fixed', top: isNarrow ? 56 : 76, right: isNarrow ? 14 : 56, zIndex: 150,
           background: 'rgba(20, 25, 35, 0.92)', backdropFilter: 'blur(28px)',
           border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 12,
           padding: 8, minWidth: 180, boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
@@ -152,15 +162,21 @@ export default function Chat() {
         </div>
       )}
 
-      <div ref={scrollRef} style={{ position: 'relative', zIndex: 1, minHeight: '100vh', padding: '100px 32px 120px', maxWidth: 720, margin: '0 auto' }}>
+      <div ref={scrollRef} style={{
+        position: 'relative', zIndex: 1, minHeight: '100vh',
+        padding: isNarrow ? '76px 16px 100px' : '100px 32px 120px',
+        maxWidth: 720, margin: '0 auto',
+      }}>
         {messages.map(m => {
           const me = m.sender_id === profile?.id;
           return (
             <div key={m.id} style={{ display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start', marginBottom: 18 }}>
               <div>
                 <div style={{
-                  maxWidth: 'min(70vw, 480px)',
-                  padding: '14px 20px', fontSize: 16, lineHeight: 1.7, letterSpacing: 1,
+                  maxWidth: isNarrow ? '78vw' : 'min(70vw, 480px)',
+                  padding: isNarrow ? '11px 16px' : '14px 20px',
+                  fontSize: isNarrow ? 15 : 16,
+                  lineHeight: 1.7, letterSpacing: 1,
                   borderRadius: 18,
                   backdropFilter: 'blur(28px) saturate(1.4) brightness(0.95)',
                   WebkitBackdropFilter: 'blur(28px) saturate(1.4) brightness(0.95)',
@@ -172,6 +188,7 @@ export default function Chat() {
                   borderTopRightRadius: me ? 6 : 18,
                   textShadow: '0 1px 3px rgba(0,0,0,0.45)',
                   whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
                 }}>{m.content}</div>
               </div>
             </div>
@@ -182,24 +199,30 @@ export default function Chat() {
       {!ended && (
         <div style={{
           position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 100,
-          padding: '16px 32px 24px',
+          padding: isNarrow ? '12px 14px 16px' : '16px 32px 24px',
           background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.5) 30%, rgba(0,0,0,0.8) 100%)',
           display: 'flex', justifyContent: 'center',
         }}>
-          <div style={{ maxWidth: 720, width: '100%', display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,0.94)', border: '0.5px solid rgba(255,255,255,0.5)', borderRadius: 999, padding: '8px 8px 8px 18px' }}>
+          <div style={{
+            maxWidth: 720, width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+            background: 'rgba(255,255,255,0.94)', border: '0.5px solid rgba(255,255,255,0.5)',
+            borderRadius: 999,
+            padding: isNarrow ? '6px 6px 6px 14px' : '8px 8px 8px 18px',
+          }}>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
               placeholder="写下回复……"
-              style={{ flex: 1, border: 'none', background: 'transparent', fontSize: 15, outline: 'none', padding: '8px 4px', color: '#2a1f1a', letterSpacing: 1 }}
+              style={{ flex: 1, border: 'none', background: 'transparent', fontSize: isNarrow ? 14 : 15, outline: 'none', padding: '8px 4px', color: '#2a1f1a', letterSpacing: 1, minWidth: 0 }}
             />
             <button onClick={send} style={{
               background: '#2a1f1a', color: '#fcf8f0', border: 'none',
-              padding: '9px 22px', borderRadius: 999,
+              padding: isNarrow ? '8px 18px' : '9px 22px', borderRadius: 999,
               fontFamily: '"Source Han Serif CN VF Medium", serif',
-              fontSize: 14, letterSpacing: 3, cursor: 'pointer',
+              fontSize: isNarrow ? 13 : 14, letterSpacing: isNarrow ? 2 : 3, cursor: 'pointer',
+              flexShrink: 0,
             }}>发送</button>
           </div>
         </div>

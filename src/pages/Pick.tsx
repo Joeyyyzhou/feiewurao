@@ -4,6 +4,7 @@ import BgVideo from '../components/BgVideo';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useToast } from '../components/Toast';
+import { useIsNarrow } from '../lib/useIsNarrow';
 import type { ReplyMood } from '../lib/database.types';
 
 const REPLY_MOODS: ReplyMood[] = ['同感', '抱抱', '陪你', '听着', '打气', '路过', '冒泡', '辛苦'];
@@ -30,6 +31,7 @@ export default function Pick() {
   const [reportReason, setReportReason] = useState<string | null>(null);
 
   const [pickErr, setPickErr] = useState<string | null>(null);
+  const isNarrow = useIsNarrow();
 
   useEffect(() => {
     if (!profile) return;
@@ -118,13 +120,13 @@ export default function Pick() {
   return (
     <>
       <BgVideo />
-      <div style={immersiveBar}>
+      <div style={{ ...immersiveBar, padding: isNarrow ? '20px 18px 14px' : '32px 56px 24px' }}>
         <Link to="/" style={backStyle}>← 回到海面</Link>
       </div>
 
-      <main style={pageStyle}>
+      <main style={{ ...pageStyle, padding: isNarrow ? '76px 16px 40px' : '100px 32px 60px' }}>
         <div style={{ width: '100%', maxWidth: 640 }}>
-          <div style={glassCard}>
+          <div style={{ ...glassCard, padding: isNarrow ? '28px 22px' : '44px 48px' }}>
             {loading ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.5)' }}>正在从海里捞起一个瓶子…</div>
             ) : !bottle ? (
@@ -145,13 +147,14 @@ export default function Pick() {
                 </div>
 
                 {!replyOpen ? (
-                  <div style={{ paddingTop: 22, borderTop: '0.5px solid rgba(255,255,255,0.18)', display: 'flex', gap: 12 }}>
-                    <button onClick={() => setReplyOpen(true)} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>回信</button>
-                    <button onClick={tossBack} className="btn btn-ghost" style={{ padding: '14px 22px' }}>放回海里</button>
+                  <div style={{ paddingTop: 22, borderTop: '0.5px solid rgba(255,255,255,0.18)', display: 'flex', gap: isNarrow ? 8 : 12, flexWrap: isNarrow ? 'wrap' : 'nowrap' }}>
+                    <button onClick={() => setReplyOpen(true)} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', minWidth: isNarrow ? '100%' : 'auto' }}>回信</button>
+                    <button onClick={tossBack} className="btn btn-ghost" style={{ padding: isNarrow ? '11px 18px' : '14px 22px', flex: isNarrow ? 1 : 'initial', justifyContent: 'center' }}>放回海里</button>
                     <button onClick={() => setReportOpen(true)} style={{
                       background: 'transparent', color: 'rgba(255,255,255,0.5)', fontSize: 13,
-                      padding: '14px 18px', borderRadius: 999, border: '0.5px solid rgba(255,255,255,0.22)',
+                      padding: isNarrow ? '11px 14px' : '14px 18px', borderRadius: 999, border: '0.5px solid rgba(255,255,255,0.22)',
                       letterSpacing: 3, cursor: 'pointer',
+                      flex: isNarrow ? 1 : 'initial',
                     }}>举报</button>
                   </div>
                 ) : (
@@ -171,7 +174,7 @@ export default function Pick() {
                     />
                     <div style={{ marginTop: 18, paddingTop: 14, borderTop: '0.5px dashed rgba(255,255,255,0.18)' }}>
                       <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.62)', letterSpacing: 3, marginBottom: 10 }}>你现在的状态</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)', gap: 8 }}>
                         {REPLY_MOODS.map(m => (
                           <button key={m} onClick={() => setReplyMood(replyMood === m ? null : m)} style={{
                             fontSize: 12.5, padding: '8px 0', borderRadius: 999,

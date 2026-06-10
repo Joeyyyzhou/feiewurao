@@ -74,10 +74,10 @@ export default function Register() {
   return (
     <>
       <BgVideo />
-      <main style={{ position: 'relative', zIndex: 1, minHeight: '100vh', padding: '110px 32px 60px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <div style={{ textAlign: 'center', marginBottom: 56, color: '#fff', textShadow: '0 2px 20px rgba(0,0,0,0.5)' }}>
+      <main style={{ position: 'relative', zIndex: 1, minHeight: '100vh', padding: 'clamp(70px, 14vw, 110px) clamp(18px, 5vw, 32px) 60px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(32px, 7vw, 56px)', color: '#fff', textShadow: '0 2px 20px rgba(0,0,0,0.5)' }}>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 13, color: 'rgba(255,255,255,0.6)', letterSpacing: 5, marginBottom: 14 }}>welcome aboard</div>
-          <div style={{ fontSize: 24, fontWeight: 300, letterSpacing: 4 }}>在鹅厂扔一个漂流瓶，<em style={{ fontStyle: 'normal' }}>可能有人懂你</em></div>
+          <div style={{ fontSize: 'clamp(18px, 5vw, 24px)', fontWeight: 300, letterSpacing: 3, lineHeight: 1.5 }}>在鹅厂扔一个漂流瓶，<em style={{ fontStyle: 'normal' }}>可能有人懂你</em></div>
         </div>
 
         <div style={{
@@ -85,7 +85,7 @@ export default function Register() {
           backdropFilter: 'blur(40px) saturate(1.5) brightness(0.92)',
           border: '0.5px solid rgba(255,255,255,0.32)',
           borderRadius: 16,
-          padding: '40px 44px',
+          padding: 'clamp(28px, 6vw, 40px) clamp(22px, 6vw, 44px)',
           color: '#fff',
           width: '100%',
           maxWidth: 460,

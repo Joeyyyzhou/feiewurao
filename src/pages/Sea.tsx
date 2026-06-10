@@ -5,6 +5,7 @@ import AppNav from '../components/AppNav';
 import AboutDrawer from '../components/AboutDrawer';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
+import { useIsNarrow } from '../lib/useIsNarrow';
 
 export default function Sea() {
   const { profile } = useAuth();
@@ -13,6 +14,7 @@ export default function Sea() {
   const [thrown, setThrown] = useState(0);
   const [picked, setPicked] = useState(0);
   const [toastShow, setToastShow] = useState(fromReply);
+  const isNarrow = useIsNarrow();
 
   useEffect(() => {
     if (fromReply) {
@@ -48,24 +50,59 @@ export default function Sea() {
           position: 'fixed', top: 96, left: '50%', transform: 'translateX(-50%)',
           zIndex: 200, background: 'rgba(0,30,50,0.85)',
           backdropFilter: 'blur(20px)', border: '0.5px solid rgba(255,255,255,0.25)',
-          borderRadius: 999, padding: '12px 26px', color: '#fff',
-          fontSize: 13, letterSpacing: 3,
+          borderRadius: 999,
+          padding: isNarrow ? '10px 18px' : '12px 26px',
+          color: '#fff',
+          fontSize: isNarrow ? 12 : 13, letterSpacing: isNarrow ? 2 : 3,
+          maxWidth: '90vw', textAlign: 'center',
         }}>
           回信已送出 · <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', margin: '0 4px', color: '#ffb84d' }}>瓶友</em> 多了一位
         </div>
       )}
 
       <main style={{ position: 'relative', zIndex: 1, height: '100vh' }}>
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '160px 56px 0', textAlign: 'center', color: '#fff' }}>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, color: 'rgba(255,255,255,0.75)', letterSpacing: 6, marginBottom: 22, textTransform: 'lowercase', textShadow: '0 1px 12px rgba(0,0,0,0.5)' }}>
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0,
+          padding: isNarrow ? '110px 24px 0' : '160px 56px 0',
+          textAlign: 'center', color: '#fff',
+        }}>
+          <div style={{
+            fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic',
+            fontSize: isNarrow ? 11 : 14,
+            color: 'rgba(255,255,255,0.75)',
+            letterSpacing: isNarrow ? 3 : 6,
+            marginBottom: isNarrow ? 16 : 22,
+            textTransform: 'lowercase',
+            textShadow: '0 1px 12px rgba(0,0,0,0.5)',
+          }}>
             a quiet sea inside tencent
           </div>
-          <h1 style={{ fontSize: 32, fontWeight: 300, lineHeight: 1.4, color: 'rgba(255,255,255,0.97)', textShadow: '0 2px 30px rgba(0,0,0,0.55)', letterSpacing: 4, margin: 0 }}>
-            在鹅厂扔一个漂流瓶，可能有人懂你。
+          <h1 style={{
+            fontSize: isNarrow ? 22 : 32,
+            fontWeight: 300,
+            lineHeight: isNarrow ? 1.55 : 1.4,
+            color: 'rgba(255,255,255,0.97)',
+            textShadow: '0 2px 30px rgba(0,0,0,0.55)',
+            letterSpacing: isNarrow ? 2 : 4,
+            margin: 0,
+          }}>
+            {isNarrow ? (
+              <>在鹅厂扔一个漂流瓶，<br/>可能有人懂你。</>
+            ) : (
+              <>在鹅厂扔一个漂流瓶，可能有人懂你。</>
+            )}
           </h1>
         </div>
 
-        <div style={{ position: 'absolute', left: '50%', bottom: '18%', transform: 'translateX(-50%)', display: 'flex', gap: 18 }}>
+        <div style={{
+          position: 'absolute', left: '50%',
+          bottom: isNarrow ? '12%' : '18%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: isNarrow ? 10 : 18,
+          flexWrap: 'nowrap',
+          whiteSpace: 'nowrap',
+        }}>
           {thrown >= 3 ? (
             <button className="btn btn-primary" disabled style={{ opacity: 0.4, cursor: 'not-allowed' }}>
               今日扔瓶已满
@@ -97,10 +134,10 @@ export default function Sea() {
 }
 
 const quotaInline: React.CSSProperties = {
-  marginLeft: 8,
+  marginLeft: 6,
   fontFamily: "'Cormorant Garamond', serif",
   fontStyle: 'italic',
-  fontSize: 14,
+  fontSize: 13,
   opacity: 0.55,
   letterSpacing: 0,
 };

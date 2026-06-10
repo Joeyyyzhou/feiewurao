@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import BgVideo from '../components/BgVideo';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
+import { useIsNarrow } from '../lib/useIsNarrow';
 import type { Mood } from '../lib/database.types';
 
 const MOODS: Mood[] = ['开心', '兴奋', '有灵感', '被治愈', '想聊', '摸鱼', '发呆', 'emo', '加班', '想吐槽'];
@@ -16,6 +17,7 @@ export default function Throw() {
   const [overlay, setOverlay] = useState(false);
   const [warn, setWarn] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const isNarrow = useIsNarrow();
 
   async function submit() {
     if (!profile || !mood || !content.trim()) return;
@@ -60,13 +62,13 @@ export default function Throw() {
   return (
     <>
       <BgVideo />
-      <div style={immersiveBar}>
+      <div style={{ ...immersiveBar, padding: isNarrow ? '20px 18px 14px' : '32px 56px 24px' }}>
         <Link to="/" style={backStyle}>← 回到海面</Link>
       </div>
 
-      <main style={pageStyle}>
+      <main style={{ ...pageStyle, padding: isNarrow ? '76px 16px 40px' : '100px 32px 60px' }}>
         <div style={{ width: '100%', maxWidth: 640 }}>
-          <div style={glassCard}>
+          <div style={{ ...glassCard, padding: isNarrow ? '28px 22px' : '44px 48px' }}>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 13, color: 'rgba(255,255,255,0.55)', letterSpacing: 4, marginBottom: 8, textAlign: 'right' }}>a letter from</div>
             <div style={{ textAlign: 'right', fontSize: 12, color: 'rgba(255,255,255,0.6)', letterSpacing: 3, marginBottom: 28, borderBottom: '0.5px solid rgba(255,255,255,0.18)', paddingBottom: 14 }}>
               No. <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', color: 'rgba(255,255,255,0.85)', margin: '0 4px' }}>{profile?.bottle_no ?? '----'}</em>　·　今晚
@@ -78,15 +80,19 @@ export default function Throw() {
               placeholder={"把想说的话写下来，\n不为被谁看见，\n只为被某人懂得。"}
               style={{
                 width: '100%', border: 'none', background: 'transparent',
-                fontFamily: '"Source Han Serif CN VF Light", serif', fontSize: 17, lineHeight: 2,
-                color: '#fff', resize: 'none', minHeight: 280, padding: 0, outline: 'none',
+                fontFamily: '"Source Han Serif CN VF Light", serif',
+                fontSize: isNarrow ? 15 : 17,
+                lineHeight: isNarrow ? 1.8 : 2,
+                color: '#fff', resize: 'none',
+                minHeight: isNarrow ? 200 : 280,
+                padding: 0, outline: 'none',
                 letterSpacing: 1,
               }}
             />
 
-            <div style={{ marginTop: 32, paddingTop: 22, borderTop: '0.5px solid rgba(255,255,255,0.18)' }}>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.62)', letterSpacing: 4, marginBottom: 16 }}>今天的状态</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+            <div style={{ marginTop: isNarrow ? 24 : 32, paddingTop: 22, borderTop: '0.5px solid rgba(255,255,255,0.18)' }}>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.62)', letterSpacing: isNarrow ? 2 : 4, marginBottom: 16 }}>今天的状态</div>
+              <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: 8 }}>
                 {MOODS.map(m => (
                   <button
                     key={m}
@@ -104,13 +110,13 @@ export default function Throw() {
               </div>
             </div>
 
-            <div style={{ marginTop: 32, paddingTop: 18, borderTop: '0.5px solid rgba(255,255,255,0.18)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginTop: isNarrow ? 24 : 32, paddingTop: 18, borderTop: '0.5px solid rgba(255,255,255,0.18)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>{content.length} / 300</div>
               <button
                 onClick={submit}
                 disabled={!content.trim() || !mood || submitting}
                 className="btn btn-primary"
-                style={{ padding: '13px 36px', fontSize: 15 }}
+                style={{ padding: isNarrow ? '11px 22px' : '13px 36px', fontSize: isNarrow ? 14 : 15 }}
               >
                 {submitting ? '扔出中…' : '扔出这个瓶子'}
               </button>

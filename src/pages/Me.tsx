@@ -6,11 +6,13 @@ import Avatar from '../components/Avatar';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useToast } from '../components/Toast';
+import { useIsNarrow } from '../lib/useIsNarrow';
 
 export default function Me() {
   const { profile, signOut, user } = useAuth();
   const toast = useToast();
   const nav = useNavigate();
+  const isNarrow = useIsNarrow();
   const [stats, setStats] = useState({ thrown: 0, picked: 0, friends: 0 });
   const [sheet, setSheet] = useState<'privacy' | 'block' | 'logout' | 'delete' | null>(null);
   const [blockList, setBlockList] = useState<{ id: string; bottleNo: string; createdAt: string }[]>([]);
@@ -72,37 +74,48 @@ export default function Me() {
     <>
       <BgVideo />
       <AppNav />
-      <main style={{ position: 'relative', zIndex: 1, minHeight: '100vh', padding: '130px 56px 80px', maxWidth: 720, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 60 }}>
-          {profile && <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}><Avatar color={profile.avatar_color} size={80} /></div>}
-          <div style={{ fontSize: 26, color: '#fff', letterSpacing: 4, marginBottom: 6, textShadow: '0 2px 16px rgba(0,0,0,0.5)' }}>
+      <main style={{
+        position: 'relative', zIndex: 1, minHeight: '100vh',
+        padding: isNarrow ? '90px 18px 60px' : '130px 56px 80px',
+        maxWidth: 720, margin: '0 auto',
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: isNarrow ? 36 : 60 }}>
+          {profile && <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}><Avatar color={profile.avatar_color} size={isNarrow ? 64 : 80} /></div>}
+          <div style={{ fontSize: isNarrow ? 22 : 26, color: '#fff', letterSpacing: isNarrow ? 2 : 4, marginBottom: 6, textShadow: '0 2px 16px rgba(0,0,0,0.5)' }}>
             No. <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>{profile?.bottle_no ?? '----'}</em>
           </div>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>{emailMasked}</div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: isNarrow ? 12 : 14, color: 'rgba(255,255,255,0.55)' }}>{emailMasked}</div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 56, background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(20px)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: '28px 12px' }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: isNarrow ? 8 : 12,
+          marginBottom: isNarrow ? 36 : 56,
+          background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(20px)',
+          border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 16,
+          padding: isNarrow ? '20px 8px' : '28px 12px',
+        }}>
           {[
             ['扔出的瓶子', stats.thrown],
             ['捞起的瓶子', stats.picked],
             ['瓶友', stats.friends],
           ].map(([label, n]) => (
             <div key={String(label)} style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 38, color: '#fff', fontWeight: 300, letterSpacing: 0.5 }}>{n as number}</div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', letterSpacing: 4, marginTop: 6 }}>{label}</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isNarrow ? 28 : 38, color: '#fff', fontWeight: 300, letterSpacing: 0.5 }}>{n as number}</div>
+              <div style={{ fontSize: isNarrow ? 11 : 13, color: 'rgba(255,255,255,0.6)', letterSpacing: isNarrow ? 2 : 4, marginTop: 6 }}>{label}</div>
             </div>
           ))}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <MenuRow label="关于非鹅勿扰漂流瓶" onClick={() => nav('/')} />
-          <MenuRow label="隐私说明" onClick={() => setSheet('privacy')} />
-          <MenuRow label="拉黑列表" onClick={() => setSheet('block')} />
-          <MenuRow label="退出登录" onClick={() => setSheet('logout')} />
+          <MenuRow label="关于非鹅勿扰漂流瓶" onClick={() => nav('/')} narrow={isNarrow} />
+          <MenuRow label="隐私说明" onClick={() => setSheet('privacy')} narrow={isNarrow} />
+          <MenuRow label="拉黑列表" onClick={() => setSheet('block')} narrow={isNarrow} />
+          <MenuRow label="退出登录" onClick={() => setSheet('logout')} narrow={isNarrow} />
         </div>
 
-        <div style={{ textAlign: 'center', paddingTop: 36, marginTop: 56, borderTop: '0.5px solid rgba(255,255,255,0.12)' }}>
-          <a onClick={() => setSheet('delete')} style={{ fontSize: 14, color: 'rgba(220,120,120,0.85)', letterSpacing: 4, cursor: 'pointer' }}>注销账号</a>
+        <div style={{ textAlign: 'center', paddingTop: 36, marginTop: isNarrow ? 36 : 56, borderTop: '0.5px solid rgba(255,255,255,0.12)' }}>
+          <a onClick={() => setSheet('delete')} style={{ fontSize: isNarrow ? 13 : 14, color: 'rgba(220,120,120,0.85)', letterSpacing: isNarrow ? 2 : 4, cursor: 'pointer' }}>注销账号</a>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 12, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginTop: 8 }}>all data permanently deleted</div>
         </div>
       </main>
@@ -131,15 +144,15 @@ export default function Me() {
   );
 }
 
-function MenuRow({ label, onClick }: { label: string; onClick: () => void }) {
+function MenuRow({ label, onClick, narrow }: { label: string; onClick: () => void; narrow?: boolean }) {
   return (
     <a onClick={onClick} style={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '18px 24px',
+      padding: narrow ? '14px 18px' : '18px 24px',
       background: 'rgba(255,255,255,0.05)',
       border: '0.5px solid rgba(255,255,255,0.1)',
       borderRadius: 10, color: 'rgba(255,255,255,0.88)',
-      fontSize: 15, letterSpacing: 3, cursor: 'pointer',
+      fontSize: narrow ? 14 : 15, letterSpacing: narrow ? 2 : 3, cursor: 'pointer',
     }}>
       <span>{label}</span>
       <span style={{ fontFamily: "'Cormorant Garamond', serif", color: 'rgba(255,255,255,0.4)' }}>›</span>
@@ -152,15 +165,18 @@ function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () =
     <div onClick={onClose} style={{
       position: 'fixed', inset: 0, zIndex: 200,
       background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(10px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 'clamp(12px, 4vw, 32px)',
     }}>
       <div onClick={(e) => e.stopPropagation()} style={{
         background: 'rgba(20,28,40,0.95)', backdropFilter: 'blur(32px)',
         border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 16,
-        padding: '36px 40px', maxWidth: 540, width: '100%', maxHeight: '80vh', overflowY: 'auto',
+        padding: 'clamp(24px, 5vw, 36px) clamp(20px, 5vw, 40px)',
+        maxWidth: 540, width: '100%', maxHeight: '80vh', overflowY: 'auto',
         color: '#fff', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        position: 'relative',
       }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: 24, right: 24, background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontSize: 13, letterSpacing: 2, cursor: 'pointer' }}>关闭</button>
+        <button onClick={onClose} style={{ position: 'absolute', top: 18, right: 20, background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontSize: 13, letterSpacing: 2, cursor: 'pointer', padding: 6 }}>关闭</button>
         {children}
       </div>
     </div>
