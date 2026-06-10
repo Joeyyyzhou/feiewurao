@@ -6,3 +6,4 @@ dist/
 *.log
 .vercel
 *.old
+.env.production

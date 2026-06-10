@@ -16,10 +16,16 @@ body {
 .bg-video-wrap {
   position: fixed; inset: 0; z-index: 0;
 }
-.bg-video-wrap video {
+.bg-video-wrap video,
+.bg-video-wrap .bg-video-layer {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
+}
+/* 双层交替的视频做 crossfade。0.9s 与 BgVideo.tsx 里 FADE 提前量保持一致。 */
+.bg-video-wrap .bg-video-layer {
+  transition: opacity 0.9s ease-in-out;
+  will-change: opacity;
 }
 .bg-video-wrap::after {
   content: '';

@@ -21,18 +21,34 @@ export default function Me() {
     if (!profile) return;
     let cancelled = false;
     (async () => {
-      const [throwRes, pickRes, friendRes] = await Promise.all([
-        supabase.from('bottles').select('id', { count: 'exact', head: true }).eq('user_id', profile.id),
-        supabase.from('bottles').select('id', { count: 'exact', head: true }).eq('picked_by', profile.id),
-        supabase.from('conversations').select('id', { count: 'exact', head: true })
-          .or(`user_a.eq.${profile.id},user_b.eq.${profile.id}`),
-      ]);
+      // 优先走 get_my_stats RPC（绕过 bottles RLS 限制，能拿到「捞起的瓶子」真实数）
+      const { data: statsRow, error: statsErr } = await supabase.rpc('get_my_stats' as any);
       if (cancelled) return;
-      setStats({
-        thrown: throwRes.count ?? 0,
-        picked: pickRes.count ?? 0,
-        friends: friendRes.count ?? 0,
-      });
+      if (!statsErr && statsRow) {
+        // RPC 返回数组（RETURNS TABLE）
+        const row = Array.isArray(statsRow) ? statsRow[0] : statsRow;
+        if (row) {
+          setStats({
+            thrown: Number(row.thrown) || 0,
+            picked: Number(row.picked) || 0,
+            friends: Number(row.friends) || 0,
+          });
+        }
+      } else {
+        // 兜底：旧逻辑（picked 在未部署 RPC 时会因 RLS 显示为 0）
+        const [throwRes, pickRes, friendRes] = await Promise.all([
+          supabase.from('bottles').select('id', { count: 'exact', head: true }).eq('user_id', profile.id),
+          supabase.from('bottles').select('id', { count: 'exact', head: true }).eq('picked_by', profile.id),
+          supabase.from('conversations').select('id', { count: 'exact', head: true })
+            .or(`user_a.eq.${profile.id},user_b.eq.${profile.id}`),
+        ]);
+        if (cancelled) return;
+        setStats({
+          thrown: throwRes.count ?? 0,
+          picked: pickRes.count ?? 0,
+          friends: friendRes.count ?? 0,
+        });
+      }
 
       // 拉黑列表
       const { data: blocks } = await supabase
