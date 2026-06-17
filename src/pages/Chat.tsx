@@ -19,10 +19,14 @@ export default function Chat() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [otherNo, setOtherNo] = useState('----');
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
+  const [origin, setOrigin] = useState<{
+    content: string; mood: string; created_at: string;
+    authorId: string; authorNo: string;
+  } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isNarrow = useIsNarrow();
 
-  // 加载消息 + 找到对方 + 订阅 Realtime
+  // 加载消息 + 找到对方 + 拿对话起源 bottle + 订阅 Realtime + 标已读
   useEffect(() => {
     if (!conversationId || !profile) return;
 
@@ -42,6 +46,24 @@ export default function Chat() {
         if (row) setOtherNo((row as any).bottle_no);
       }
 
+      // 拉起源 bottle（"我扔出去的那一封"，对方捞到的就是它）
+      const { data: originRow, error: originErr } = await supabase.rpc(
+        'get_conversation_origin' as any,
+        { p_conv_id: conversationId }
+      );
+      if (!originErr && originRow) {
+        const r = Array.isArray(originRow) ? originRow[0] : originRow;
+        if (r) {
+          setOrigin({
+            content: r.content,
+            mood: r.mood,
+            created_at: r.created_at,
+            authorId: r.author_id,
+            authorNo: r.author_no,
+          });
+        }
+      }
+
       // 拉历史消息
       const { data: msgs } = await supabase
         .from('messages')
@@ -49,6 +71,9 @@ export default function Chat() {
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
       if (msgs) setMessages(msgs as MessageRow[]);
+
+      // 标记已读
+      supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId }).catch(() => {});
 
       // 订阅 Realtime
       const channel = supabase
@@ -61,6 +86,10 @@ export default function Chat() {
               if (prev.find(m => m.id === (payload.new as any).id)) return prev;
               return [...prev, payload.new as MessageRow];
             });
+            // 收到对方新消息也顺手标已读
+            if (payload.new?.sender_id !== profile.id) {
+              supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId }).catch(() => {});
+            }
           },
         )
         .subscribe();
@@ -161,6 +190,65 @@ export default function Chat() {
         padding: isNarrow ? '76px 16px 100px' : '100px 32px 120px',
         maxWidth: 720, margin: '0 auto',
       }}>
+        {/* 对话起点：捞到的那个瓶子原文。用"纸张/信封"质感与普通气泡区分 */}
+        {origin && (() => {
+          const fromMe = origin.authorId === profile?.id;
+          return (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
+              <div style={{
+                maxWidth: isNarrow ? '92vw' : 'min(82vw, 560px)',
+                padding: isNarrow ? '20px 22px' : '28px 32px',
+                background: 'rgba(252, 246, 232, 0.22)',
+                backdropFilter: 'blur(36px) saturate(1.4) brightness(0.95)',
+                WebkitBackdropFilter: 'blur(36px) saturate(1.4) brightness(0.95)',
+                border: '0.5px solid rgba(255,255,255,0.32)',
+                borderRadius: 14,
+                boxShadow: '0 14px 36px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.08)',
+              }}>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+                  paddingBottom: 12, marginBottom: 14,
+                  borderBottom: '0.5px solid rgba(255,255,255,0.22)',
+                }}>
+                  <div style={{
+                    fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic',
+                    fontSize: isNarrow ? 12 : 13, letterSpacing: 3,
+                    color: 'rgba(255,255,255,0.62)',
+                  }}>
+                    {fromMe ? 'your bottle' : 'the bottle you picked'}
+                  </div>
+                  <div style={{
+                    fontSize: isNarrow ? 11 : 12, letterSpacing: 2,
+                    color: 'rgba(255,255,255,0.62)',
+                  }}>
+                    No. <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>{origin.authorNo}</em>
+                    　·　{origin.mood}
+                  </div>
+                </div>
+                <div style={{
+                  fontFamily: '"Source Han Serif CN VF Light", serif',
+                  fontSize: isNarrow ? 15 : 16.5,
+                  lineHeight: isNarrow ? 1.85 : 2,
+                  letterSpacing: 1,
+                  color: 'rgba(255,255,255,0.95)',
+                  textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}>{origin.content}</div>
+                <div style={{
+                  marginTop: 14,
+                  fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic',
+                  fontSize: 11, letterSpacing: 2,
+                  color: 'rgba(255,255,255,0.5)',
+                  textAlign: 'right',
+                }}>
+                  {relativeTime(origin.created_at)}　扔入海中
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {messages.map(m => {
           const me = m.sender_id === profile?.id;
           return (
@@ -228,3 +316,18 @@ export default function Chat() {
 const immersiveBar: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '32px 56px 24px', background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, transparent 100%)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
 const backStyle: React.CSSProperties = { fontSize: 14, color: 'rgba(255,255,255,0.85)', letterSpacing: 2, textDecoration: 'none', textShadow: '0 1px 8px rgba(0,0,0,0.4)' };
 const menuItemStyle: React.CSSProperties = { padding: '12px 18px', fontSize: 14, color: 'rgba(255,255,255,0.88)', letterSpacing: 3, textDecoration: 'none', borderRadius: 8, cursor: 'pointer' };
+
+function relativeTime(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return '刚刚';
+  if (m < 60) return `${m} 分钟前`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} 小时前`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d} 天前`;
+  const w = Math.floor(d / 7);
+  if (w < 4) return `${w} 周前`;
+  return `${Math.floor(d / 30)} 个月前`;
+}

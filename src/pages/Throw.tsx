@@ -107,7 +107,16 @@ export default function Throw() {
             </div>
 
             <div style={{ marginTop: isNarrow ? 24 : 32, paddingTop: 18, borderTop: '0.5px solid rgba(255,255,255,0.18)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>{content.length} / 300</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>{content.length} / 300</div>
+                {(!content.trim() || !mood) && (
+                  <div style={{ fontSize: 12, color: 'rgba(255,220,180,0.85)', letterSpacing: 1 }}>
+                    {!content.trim() && !mood ? '还差：写点内容 + 选个心情' :
+                     !content.trim() ? '还差：写点内容' :
+                     '还差：选一个今天的状态'}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={submit}
                 disabled={!content.trim() || !mood || submitting}
