@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import BgVideo from '../components/BgVideo';
 import AppNav from '../components/AppNav';
 import AboutDrawer from '../components/AboutDrawer';
+import OceanWeather from '../components/OceanWeather';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useIsNarrow } from '../lib/useIsNarrow';
@@ -86,6 +87,7 @@ export default function Sea() {
       )}
 
       <main style={{ position: 'relative', zIndex: 1, height: '100vh' }}>
+        <OceanWeather narrow={isNarrow} />
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0,
           padding: isNarrow ? '110px 24px 0' : '160px 56px 0',
