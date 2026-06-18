@@ -1,7 +1,22 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function AboutDrawer() {
   const [open, setOpen] = useState(false);
+  const loc = useLocation();
+  const nav = useNavigate();
+
+  // 监听 URL query：?about=1 自动展开（用于从其他页面跳过来时拉起）
+  useEffect(() => {
+    const params = new URLSearchParams(loc.search);
+    if (params.get('about') === '1') {
+      setOpen(true);
+      // 拉起后把 query 从地址栏清掉，避免下次刷新又自动弹
+      params.delete('about');
+      const next = params.toString();
+      nav(`${loc.pathname}${next ? '?' + next : ''}`, { replace: true });
+    }
+  }, [loc.search]);
 
   // ESC 关闭
   useEffect(() => {

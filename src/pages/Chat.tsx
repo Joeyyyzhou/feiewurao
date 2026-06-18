@@ -14,8 +14,12 @@ export default function Chat() {
   const loc = useLocation();
   const nav = useNavigate();
   const ended = loc.search.includes('ended=1');
+  const draftKey = `fewr.chat.draft.${conversationId ?? ''}`;
   const [messages, setMessages] = useState<MessageRow[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(() => {
+    if (typeof window === 'undefined' || !conversationId) return '';
+    try { return localStorage.getItem(`fewr.chat.draft.${conversationId}`) ?? ''; } catch { return ''; }
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const [otherNo, setOtherNo] = useState('----');
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
@@ -72,8 +76,16 @@ export default function Chat() {
         .order('created_at', { ascending: true });
       if (msgs) setMessages(msgs as MessageRow[]);
 
-      // 标记已读
-      supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId }).catch(() => {});
+      // 标记已读（多次调用：进入页面立即标 + 退出页面再标一次保险）
+      const markRead = async () => {
+        try {
+          const { error } = await supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId });
+          if (error) console.warn('[chat] mark_conversation_read failed:', error.message);
+        } catch (e) {
+          console.warn('[chat] mark_conversation_read exception:', e);
+        }
+      };
+      markRead();
 
       // 订阅 Realtime
       const channel = supabase
@@ -88,12 +100,16 @@ export default function Chat() {
             });
             // 收到对方新消息也顺手标已读
             if (payload.new?.sender_id !== profile.id) {
-              supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId }).catch(() => {});
+              markRead();
             }
           },
         )
         .subscribe();
-      unsub = () => { supabase.removeChannel(channel); };
+      unsub = () => {
+        supabase.removeChannel(channel);
+        // 离开聊天前再标一次（保险），保证 last_read 时间戳是离开瞬间
+        markRead();
+      };
     })();
     return () => { if (unsub) unsub(); };
   }, [conversationId, profile]);
@@ -102,33 +118,79 @@ export default function Chat() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
+  // 输入框草稿持久化
+  useEffect(() => {
+    if (!conversationId) return;
+    const id = setTimeout(() => {
+      try {
+        if (input) localStorage.setItem(draftKey, input);
+        else localStorage.removeItem(draftKey);
+      } catch {}
+    }, 300);
+    return () => clearTimeout(id);
+  }, [input, conversationId, draftKey]);
+
   async function send() {
     if (!input.trim() || !conversationId || !profile) return;
     const text = input.trim();
     setInput('');
+
+    // 乐观更新：先把自己的消息塞进 UI，发送失败再回滚
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const optimistic = {
+      id: tempId,
+      conversation_id: conversationId,
+      sender_id: profile.id,
+      content: text,
+      reply_mood: null,
+      created_at: new Date().toISOString(),
+    } as unknown as MessageRow;
+    setMessages(prev => [...prev, optimistic]);
+
     try {
-      // 敏感词预检（带超时，超时/未部署直接放过）
-      const { data: scan } = await invokeWithTimeout('sensitive-check', { content: text });
-      if (scan?.sensitive) {
+      // 敏感词预检（带超时；只在明显违规时拦截，否则放过）
+      // 注意：聊天里允许 emoji 和大部分自由表达，关键词太严会误伤"举手🙋"这类
+      let blocked = false;
+      try {
+        const { data: scan } = await invokeWithTimeout('sensitive-check', { content: text }, 2000);
+        if (scan?.sensitive) blocked = true;
+      } catch {
+        // 检测失败直接放过；后端 RLS 兜底
+      }
+      if (blocked) {
         setInput(text);
+        setMessages(prev => prev.filter(m => (m as any).id !== tempId));
         toast.error('内容可能违反社区规则，请修改后再发送');
         return;
       }
-      const { error } = await supabase.from('messages').insert({
-        conversation_id: conversationId,
-        sender_id: profile.id,
-        content: text,
-        reply_mood: null,
-      });
+
+      const { data: inserted, error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: profile.id,
+          content: text,
+          reply_mood: null,
+        })
+        .select('*')
+        .single();
       if (error) {
+        console.error('[chat] insert error:', error);
         setInput(text);
-        toast.error('消息发送失败：' + error.message);
+        setMessages(prev => prev.filter(m => (m as any).id !== tempId));
+        toast.error('发送失败：' + (error.message || '未知错误'));
+        return;
+      }
+      // 用真实 id 替换乐观条目
+      if (inserted) {
+        setMessages(prev => prev.map(m => (m as any).id === tempId ? (inserted as MessageRow) : m));
       }
     } catch (e: any) {
+      console.error('[chat] send exception:', e);
       setInput(text);
-      toast.error('网络异常，请稍后重试');
+      setMessages(prev => prev.filter(m => (m as any).id !== tempId));
+      toast.error('网络异常：' + (e?.message || '请稍后重试'));
     }
-    // 自己发的也通过 Realtime 回流，避免重复 setState
   }
   async function endChat() {
     if (!conversationId) return;
@@ -186,8 +248,8 @@ export default function Chat() {
       )}
 
       <div ref={scrollRef} style={{
-        position: 'relative', zIndex: 1, minHeight: '100vh',
-        padding: isNarrow ? '76px 16px 100px' : '100px 32px 120px',
+        position: 'relative', zIndex: 1, minHeight: '100dvh',
+        padding: isNarrow ? '76px 16px calc(100px + env(safe-area-inset-bottom))' : '100px 32px 120px',
         maxWidth: 720, margin: '0 auto',
       }}>
         {/* 对话起点：捞到的那个瓶子原文。用"纸张/信封"质感与普通气泡区分 */}
@@ -251,9 +313,10 @@ export default function Chat() {
 
         {messages.map(m => {
           const me = m.sender_id === profile?.id;
+          const sending = me && String((m as any).id ?? '').startsWith('temp-');
           return (
             <div key={m.id} style={{ display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start', marginBottom: 18 }}>
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: me ? 'flex-end' : 'flex-start' }}>
                 <div style={{
                   maxWidth: isNarrow ? '78vw' : 'min(70vw, 480px)',
                   padding: isNarrow ? '11px 16px' : '14px 20px',
@@ -271,7 +334,18 @@ export default function Chat() {
                   textShadow: '0 1px 3px rgba(0,0,0,0.45)',
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
+                  opacity: sending ? 0.78 : 1,
+                  transition: 'opacity 0.25s ease',
                 }}>{m.content}</div>
+                {sending && (
+                  <div style={{
+                    marginTop: 4, marginRight: 4,
+                    fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic',
+                    fontSize: 11, letterSpacing: 1,
+                    color: 'rgba(255,255,255,0.55)',
+                    textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                  }}>sending…</div>
+                )}
               </div>
             </div>
           );
@@ -281,7 +355,9 @@ export default function Chat() {
       {!ended && (
         <div style={{
           position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 100,
-          padding: isNarrow ? '12px 14px 16px' : '16px 32px 24px',
+          padding: isNarrow
+            ? 'calc(12px) 14px calc(16px + env(safe-area-inset-bottom))'
+            : '16px 32px 24px',
           background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.5) 30%, rgba(0,0,0,0.8) 100%)',
           display: 'flex', justifyContent: 'center',
         }}>

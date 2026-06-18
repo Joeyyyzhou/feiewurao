@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import BgVideo from '../components/BgVideo';
 import { supabase, invokeWithTimeout } from '../lib/supabase';
@@ -7,6 +7,11 @@ import { useIsNarrow } from '../lib/useIsNarrow';
 import type { Mood } from '../lib/database.types';
 
 const MOODS: Mood[] = ['开心', '兴奋', '有灵感', '被治愈', '想聊', '摸鱼', '发呆', 'emo', '加班', '想吐槽'];
+const MOOD_EMOJI: Record<Mood, string> = {
+  '开心': '🌤', '兴奋': '✨', '有灵感': '💡', '被治愈': '🌿', '想聊': '💭',
+  '摸鱼': '🐟', '发呆': '🌫', 'emo': '🌧', '加班': '⏰', '想吐槽': '🙄',
+};
+const DRAFT_KEY = 'fewr.throw.draft';
 
 export default function Throw() {
   const { profile } = useAuth();
@@ -17,7 +22,33 @@ export default function Throw() {
   const [overlay, setOverlay] = useState(false);
   const [warn, setWarn] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
   const isNarrow = useIsNarrow();
+
+  // 草稿恢复（仅在挂载时尝试一次）
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d?.content) {
+          setContent(d.content);
+          if (d.mood) setMood(d.mood);
+          setDraftRestored(true);
+          setTimeout(() => setDraftRestored(false), 4500);
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // 自动保存草稿（debounce 不严格，simple 即可）
+  useEffect(() => {
+    if (!content.trim() && !mood) return;
+    const id = setTimeout(() => {
+      try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ content, mood })); } catch {}
+    }, 400);
+    return () => clearTimeout(id);
+  }, [content, mood]);
 
   async function submit() {
     if (!profile || !mood || !content.trim()) return;
@@ -42,7 +73,7 @@ export default function Throw() {
     setSubmitting(false);
     if (error) {
       if (error.message.includes('quota')) {
-        setErr('今天的 3 次扔瓶机会已用完，明天再来吧。');
+        setErr('今晚的潮汐已经退去，明天 0 点会再涌起。');
       } else if (error.message.includes('sensitive')) {
         setWarn(true);
       } else {
@@ -51,6 +82,8 @@ export default function Throw() {
       return;
     }
     setOverlay(true);
+    // 扔出成功，清空草稿
+    try { localStorage.removeItem(DRAFT_KEY); } catch {}
     // 跳回首页时带 ?refresh=throw 让 Sea 刷新配额
     setTimeout(() => nav('/?refresh=throw'), 2200);
   }
@@ -64,10 +97,23 @@ export default function Throw() {
 
       <main style={{ ...pageStyle, padding: isNarrow ? '76px 16px 40px' : '100px 32px 60px' }}>
         <div style={{ width: '100%', maxWidth: 640 }}>
+          {draftRestored && (
+            <div style={{
+              marginBottom: 14, padding: '10px 14px',
+              background: 'rgba(255,220,180,0.14)',
+              border: '0.5px solid rgba(255,200,150,0.4)',
+              borderRadius: 10,
+              fontSize: 12.5, color: 'rgba(255,235,210,0.95)',
+              letterSpacing: 1, textAlign: 'center',
+              textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+            }}>
+              已为你恢复上次没扔完的瓶子草稿
+            </div>
+          )}
           <div style={{ ...glassCard, padding: isNarrow ? '28px 22px' : '44px 48px' }}>
-            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 13, color: 'rgba(255,255,255,0.55)', letterSpacing: 4, marginBottom: 8, textAlign: 'right' }}>a letter from</div>
-            <div style={{ textAlign: 'right', fontSize: 12, color: 'rgba(255,255,255,0.6)', letterSpacing: 3, marginBottom: 28, borderBottom: '0.5px solid rgba(255,255,255,0.18)', paddingBottom: 14 }}>
-              No. <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', color: 'rgba(255,255,255,0.85)', margin: '0 4px' }}>{profile?.bottle_no ?? '----'}</em>　·　今晚
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 13, color: 'rgba(255,255,255,0.78)', letterSpacing: 4, marginBottom: 8, textAlign: 'right', textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>a letter from</div>
+            <div style={{ textAlign: 'right', fontSize: 12, color: 'rgba(255,255,255,0.82)', letterSpacing: 3, marginBottom: 28, borderBottom: '0.5px solid rgba(255,255,255,0.28)', paddingBottom: 14, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+              No. <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', color: '#fff', margin: '0 4px' }}>{profile?.bottle_no ?? '----'}</em>　·　今晚
             </div>
 
             <textarea
@@ -79,15 +125,17 @@ export default function Throw() {
                 fontFamily: '"Source Han Serif CN VF Light", serif',
                 fontSize: isNarrow ? 15 : 17,
                 lineHeight: isNarrow ? 1.8 : 2,
-                color: '#fff', resize: 'none',
+                color: 'rgba(255,255,255,0.98)', resize: 'none',
                 minHeight: isNarrow ? 200 : 280,
                 padding: 0, outline: 'none',
                 letterSpacing: 1,
+                textShadow: '0 1px 4px rgba(0,0,0,0.55)',
               }}
+              className="letter-textarea"
             />
 
-            <div style={{ marginTop: isNarrow ? 24 : 32, paddingTop: 22, borderTop: '0.5px solid rgba(255,255,255,0.18)' }}>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.62)', letterSpacing: isNarrow ? 2 : 4, marginBottom: 16 }}>今天的状态</div>
+            <div style={{ marginTop: isNarrow ? 24 : 32, paddingTop: 22, borderTop: '0.5px solid rgba(255,255,255,0.28)' }}>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.88)', letterSpacing: isNarrow ? 2 : 4, marginBottom: 16, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>今天的状态</div>
               <div style={{ display: 'grid', gridTemplateColumns: isNarrow ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: 8 }}>
                 {MOODS.map(m => (
                   <button
@@ -95,22 +143,30 @@ export default function Throw() {
                     onClick={() => setMood(m)}
                     style={{
                       fontSize: 13, padding: '9px 0', borderRadius: 999,
-                      border: '0.5px solid rgba(255,255,255,0.35)',
-                      color: mood === m ? '#1a4456' : 'rgba(255,255,255,0.82)',
-                      background: mood === m ? 'rgba(255,255,255,0.94)' : 'transparent',
+                      border: '0.5px solid rgba(255,255,255,0.5)',
+                      color: mood === m ? '#1a4456' : '#fff',
+                      background: mood === m ? 'rgba(255,255,255,0.96)' : 'rgba(255,255,255,0.08)',
                       cursor: 'pointer',
                       fontFamily: mood === m ? '"Source Han Serif CN VF Medium", serif' : 'inherit',
+                      textShadow: mood === m ? 'none' : '0 1px 3px rgba(0,0,0,0.5)',
                     }}
-                  >{m}</button>
+                  ><span style={{ marginRight: 4, opacity: 0.85 }}>{MOOD_EMOJI[m]}</span>{m}</button>
                 ))}
               </div>
             </div>
 
-            <div style={{ marginTop: isNarrow ? 24 : 32, paddingTop: 18, borderTop: '0.5px solid rgba(255,255,255,0.18)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ marginTop: isNarrow ? 24 : 32, paddingTop: 18, borderTop: '0.5px solid rgba(255,255,255,0.28)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>{content.length} / 300</div>
+                <div style={{
+                  fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14,
+                  color: content.length >= 290 ? 'rgba(255,160,140,0.95)'
+                       : content.length >= 260 ? 'rgba(255,210,140,0.95)'
+                       : 'rgba(255,255,255,0.78)',
+                  textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                  transition: 'color 0.2s ease',
+                }}>{content.length} / 300</div>
                 {(!content.trim() || !mood) && (
-                  <div style={{ fontSize: 12, color: 'rgba(255,220,180,0.85)', letterSpacing: 1 }}>
+                  <div style={{ fontSize: 12, color: 'rgba(255,220,180,0.95)', letterSpacing: 1, textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
                     {!content.trim() && !mood ? '还差：写点内容 + 选个心情' :
                      !content.trim() ? '还差：写点内容' :
                      '还差：选一个今天的状态'}

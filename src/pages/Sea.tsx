@@ -129,10 +129,9 @@ export default function Sea() {
           whiteSpace: 'nowrap',
         }}>
           {thrown >= 3 ? (
-            <button className="btn btn-primary" disabled style={{ opacity: 0.4, cursor: 'not-allowed' }}>
-              今日扔瓶已满
-              <span style={quotaInline}>0 / 3</span>
-            </button>
+            <Link to="/friends" className="btn btn-primary">
+              看看你的瓶友
+            </Link>
           ) : (
             <Link to="/throw" className="btn btn-primary">
               扔一个瓶子
@@ -140,10 +139,9 @@ export default function Sea() {
             </Link>
           )}
           {picked >= 3 ? (
-            <button className="btn btn-ghost" disabled style={{ opacity: 0.4, cursor: 'not-allowed' }}>
-              今日捞瓶已满
-              <span style={quotaInline}>0 / 3</span>
-            </button>
+            <Link to="/friends" className="btn btn-ghost">
+              看看你的瓶友
+            </Link>
           ) : (
             <Link to="/pick" className="btn btn-ghost">
               捞一个瓶子

@@ -57,16 +57,17 @@ export default function AppNav() {
         <Link to="/friends" className={`nav-link ${path === '/friends' ? 'active' : ''}`} style={{ position: 'relative' }}>
           瓶友
           {unread > 0 && path !== '/friends' && (
-            <span style={{
-              position: 'absolute', top: -4, right: -10,
-              minWidth: 16, height: 16, padding: '0 4px',
-              background: 'rgba(220, 110, 90, 0.95)',
-              borderRadius: 999, color: '#fff',
-              fontSize: 10, fontWeight: 500,
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 2px 6px rgba(220, 110, 90, 0.55)',
-              border: '1px solid rgba(20, 30, 45, 0.85)',
-            }}>{unread > 9 ? '9+' : unread}</span>
+            // 玻璃风微光小点：奶白圆 + 暖光晕，呼吸动画。不显示数字，保持克制。
+            <span
+              aria-label={`${unread} 条未读`}
+              style={{
+                position: 'absolute', top: -2, right: -8,
+                width: 6, height: 6, borderRadius: 999,
+                background: 'rgba(255, 252, 240, 0.95)',
+                boxShadow: '0 0 8px rgba(255, 240, 200, 0.85), 0 0 0 0.5px rgba(0,0,0,0.2)',
+                animation: 'softPulse 2.4s ease-in-out infinite',
+              }}
+            />
           )}
         </Link>
         <Link to="/me" className={`nav-link ${path === '/me' ? 'active' : ''}`}>我</Link>
@@ -81,9 +82,9 @@ export default function AppNav() {
         whiteSpace: 'nowrap',
       }}>
         {isNarrow ? (
-          <>还有 <em style={emStyle}>{countdown.h}</em>:<em style={emStyle}>{countdown.m}</em></>
+          <>距明天 <em style={emStyle}>{countdown.h}</em>:<em style={emStyle}>{countdown.m}</em></>
         ) : (
-          <>每日 <em style={emStyle}>0</em>:<em style={emStyle}>00</em> 重置 · 还有 <em style={emStyle}>{countdown.h}</em>:<em style={emStyle}>{countdown.m}</em> 刷新</>
+          <>潮水重涌于明日 <em style={emStyle}>0</em>:<em style={emStyle}>00</em> · 还有 <em style={emStyle}>{countdown.h}</em>:<em style={emStyle}>{countdown.m}</em></>
         )}
       </div>
     </nav>

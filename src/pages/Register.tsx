@@ -5,19 +5,18 @@ import { useAuth } from '../lib/auth';
 import BgVideo from '../components/BgVideo';
 import AboutDrawer from '../components/AboutDrawer';
 
-type Stage = 'form' | 'wait-email';
+type Mode = 'register' | 'login';
 
 export default function Register() {
   const nav = useNavigate();
   const { session, loading } = useAuth();
-  const [stage, setStage] = useState<Stage>('form');
+  const [mode, setMode] = useState<Mode>('register');
+  const [inviteCode, setInviteCode] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // 已经登录的用户（包括邮件链接回来后 session 已建立）→ 直接进站
-  // profile 由 auth.tsx 的 loadProfile 全局负责，这里不重复调用 create_profile
   useEffect(() => {
     if (!loading && session?.user) {
       nav('/', { replace: true });
@@ -34,41 +33,45 @@ export default function Register() {
       setErr('密码至少 6 位');
       return;
     }
+    if (mode === 'register' && inviteCode.trim().length === 0) {
+      setErr('请输入邀请码');
+      return;
+    }
+
     setSubmitting(true);
 
-    // 1) 先尝试登录（老用户）
-    const signIn = await supabase.auth.signInWithPassword({ email, password });
-    if (!signIn.error && signIn.data.user) {
-      // 老用户：检查邮箱是否已确认
-      if (!signIn.data.user.email_confirmed_at && !(signIn.data.user as any).confirmed_at) {
-        setSubmitting(false);
-        setStage('wait-email');
+    if (mode === 'login') {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      setSubmitting(false);
+      if (error) {
+        setErr(error.message.toLowerCase().includes('invalid') ? '邮箱或密码错误' : error.message);
         return;
       }
-      // 已确认 → session 已建立，上面的 useEffect 会自动 nav('/')
-      setSubmitting(false);
+      // useEffect 会 nav('/')
       return;
     }
 
-    // 2) 登录失败且是凭证错误 → 走注册
-    if (signIn.error && /invalid login credentials/i.test(signIn.error.message)) {
-      const signUp = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-        },
-      });
+    // mode === 'register'
+    const { error: rpcErr } = await supabase.rpc('register_with_invite' as any, {
+      p_invite_code: inviteCode.trim().toUpperCase(),
+      p_email: email.trim(),
+      p_password: password,
+    });
+    if (rpcErr) {
       setSubmitting(false);
-      if (signUp.error) { setErr(signUp.error.message); return; }
-      // 注册成功后 Supabase 已发邮件，停在 wait-email
-      setStage('wait-email');
+      setErr(rpcErr.message.replace(/^.*?:\s*/, ''));
       return;
     }
 
-    // 3) 其他错误（密码错等）
+    // 注册成功后用密码登录拿 session
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setSubmitting(false);
-    setErr(signIn.error?.message ?? '登录失败');
+    if (signInErr) {
+      setErr('注册成功，但自动登录失败，请手动用「老用户登录」进入');
+      setMode('login');
+      return;
+    }
+    // useEffect 会 nav('/')
   }
 
   return (
@@ -91,58 +94,54 @@ export default function Register() {
           maxWidth: 460,
           boxShadow: '0 16px 48px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.4)',
         }}>
-          {stage === 'form' && (
-            <>
-              <div style={{ textAlign: 'center', marginBottom: 32, fontSize: 13, color: 'rgba(255,255,255,0.85)', letterSpacing: 3, paddingBottom: 14, borderBottom: '0.5px solid rgba(255,255,255,0.18)' }}>
-                注册 / 登录
-              </div>
+          {/* 模式切换 */}
+          <div style={{ display: 'flex', gap: 0, marginBottom: 28, borderBottom: '0.5px solid rgba(255,255,255,0.18)' }}>
+            <ModeTab active={mode === 'register'} onClick={() => { setMode('register'); setErr(null); }}>新人注册</ModeTab>
+            <ModeTab active={mode === 'login'} onClick={() => { setMode('login'); setErr(null); }}>老用户登录</ModeTab>
+          </div>
 
-              <FormRow label="企业邮箱">
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="yourname@tencent.com" style={inputStyle} />
-              </FormRow>
-
-              <FormRow label="密码">
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
-                  placeholder="至少 6 位"
-                  style={inputStyle}
-                />
-              </FormRow>
-
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4, marginBottom: 8 }}>
-                新用户首次注册需邮箱验证 · 老用户直接登录
-              </div>
-
-              {err && <div style={{ color: 'rgba(255,180,180,0.95)', fontSize: 13, marginTop: 4, marginBottom: 10 }}>⚠ {err}</div>}
-
-              <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 18 }} onClick={submit} disabled={submitting || !email || !password}>
-                {submitting ? '处理中…' : '进入海面'}
-              </button>
-            </>
+          {mode === 'register' && (
+            <FormRow label="邀请码">
+              <input
+                type="text"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+                placeholder="问已在用的鹅厂同事要 6 位码"
+                style={{ ...inputStyle, letterSpacing: 6, textAlign: 'center', fontSize: 17 }}
+                maxLength={6}
+              />
+            </FormRow>
           )}
 
-          {stage === 'wait-email' && (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, color: 'rgba(255,255,255,0.55)', letterSpacing: 4, marginBottom: 18 }}>check your inbox</div>
-              <div style={{ fontSize: 16, lineHeight: 1.9, letterSpacing: 1.5, marginBottom: 24 }}>
-                我们给 <em style={{ fontStyle: 'normal', color: '#fff' }}>{email}</em> 发了一封确认邮件。<br/>
-                点击邮件中的链接完成验证，<br/>
-                然后回到这里就能进站了。
-              </div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.8, marginBottom: 28, letterSpacing: 1 }}>
-                没收到？检查垃圾邮件夹，<br/>
-                或确认邮箱真实存在且为 @tencent.com 工作邮箱
-              </div>
-              <button className="btn btn-ghost" onClick={() => { setStage('form'); setErr(null); }} style={{ marginRight: 12 }}>换个邮箱</button>
-              <button className="btn btn-primary" onClick={async () => {
-                await supabase.auth.resend({ type: 'signup', email });
-                alert('已重新发送，请稍等几秒查看邮箱');
-              }}>重发邮件</button>
-            </div>
-          )}
+          <FormRow label="企业邮箱">
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="yourname@tencent.com" style={inputStyle} />
+          </FormRow>
+
+          <FormRow label="密码">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+              placeholder="至少 6 位"
+              style={inputStyle}
+            />
+          </FormRow>
+
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4, marginBottom: 8 }}>
+            {mode === 'register' ? '注册不发邮件，立即进站' : '使用注册时的邮箱+密码登录'}
+          </div>
+
+          {err && <div style={{ color: 'rgba(255,180,180,0.95)', fontSize: 13, marginTop: 4, marginBottom: 10 }}>⚠ {err}</div>}
+
+          <button
+            className="btn btn-primary"
+            style={{ width: '100%', justifyContent: 'center', marginTop: 18 }}
+            onClick={submit}
+            disabled={submitting || !email || !password || (mode === 'register' && inviteCode.length < 6)}
+          >
+            {submitting ? '处理中…' : (mode === 'register' ? '进入海面' : '登录')}
+          </button>
         </div>
 
         <div style={{ marginTop: 32, textAlign: 'center', fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: 2, lineHeight: 1.8 }}>
@@ -152,6 +151,27 @@ export default function Register() {
       </main>
       <AboutDrawer />
     </>
+  );
+}
+
+function ModeTab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flex: 1,
+        padding: '12px 0',
+        background: 'transparent',
+        border: 'none',
+        color: active ? '#fff' : 'rgba(255,255,255,0.5)',
+        fontSize: 14,
+        letterSpacing: 3,
+        cursor: 'pointer',
+        borderBottom: active ? '1.5px solid #fff' : '1.5px solid transparent',
+        marginBottom: -1,
+        fontFamily: 'inherit',
+      }}
+    >{children}</button>
   );
 }
 

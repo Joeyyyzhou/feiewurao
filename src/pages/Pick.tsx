@@ -8,6 +8,13 @@ import { useIsNarrow } from '../lib/useIsNarrow';
 import type { ReplyMood } from '../lib/database.types';
 
 const REPLY_MOODS: ReplyMood[] = ['同感', '抱抱', '陪你', '听着', '打气', '路过', '冒泡', '辛苦'];
+const REPLY_EMOJI: Record<string, string> = {
+  '同感': '🤝', '抱抱': '🤗', '陪你': '🌙', '听着': '👂',
+  '打气': '🌟', '路过': '🍃', '冒泡': '💧', '辛苦': '☕',
+};
+
+// 草稿键：bottleId 维度，确保切换瓶子时不串
+const replyDraftKey = (bottleId: string) => `fewr.reply.draft.${bottleId}`;
 
 interface PickedBottle {
   id: string;
@@ -41,7 +48,7 @@ export default function Pick() {
       if (cancelled) return;
       if (error) {
         if (error.message.includes('quota')) {
-          setPickErr('今天的 3 次捞瓶机会已用完，明天再来吧。');
+          setPickErr('今天的海已经平静下来了，明天 0 点潮水会再次涌起。');
         } else {
           setPickErr(error.message);
         }
@@ -52,11 +59,33 @@ export default function Pick() {
       const row = Array.isArray(data) ? data[0] : data;
       if (row) {
         setBottle(row as any);
+        // 尝试恢复这条瓶子的回信草稿
+        try {
+          const raw = localStorage.getItem(replyDraftKey((row as any).id));
+          if (raw) {
+            const d = JSON.parse(raw);
+            if (d?.text) setReplyText(d.text);
+            if (d?.mood) setReplyMood(d.mood);
+            if (d?.text) setReplyOpen(true);
+          }
+        } catch {}
       }
       setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [profile]);
+
+  // 自动保存回信草稿（按 bottleId 维度）
+  useEffect(() => {
+    if (!bottle?.id) return;
+    if (!replyText.trim() && !replyMood) return;
+    const id = setTimeout(() => {
+      try {
+        localStorage.setItem(replyDraftKey(bottle.id), JSON.stringify({ text: replyText, mood: replyMood }));
+      } catch {}
+    }, 400);
+    return () => clearTimeout(id);
+  }, [bottle?.id, replyText, replyMood]);
 
   async function sendReply() {
     if (!bottle || !replyText.trim()) return;
@@ -77,6 +106,8 @@ export default function Pick() {
         return;
       }
       setOverlay('reply');
+      // 回信成功，清掉草稿
+      try { localStorage.removeItem(replyDraftKey(bottle.id)); } catch {}
       setTimeout(() => nav('/?fromReply=1'), 2200);
     } catch (e: any) {
       toast.error('网络异常，请稍后重试');
@@ -87,6 +118,7 @@ export default function Pick() {
     try {
       const { error } = await supabase.rpc('toss_bottle' as any, { p_bottle_id: bottle.id });
       if (error) { toast.error('放回失败：' + error.message); return; }
+      try { localStorage.removeItem(replyDraftKey(bottle.id)); } catch {}
       setOverlay('toss');
       setTimeout(() => nav('/?refresh=toss'), 2200);
     } catch (e: any) {
@@ -158,12 +190,14 @@ export default function Pick() {
                       value={replyText}
                       onChange={(e) => { if (e.target.value.length <= 500) setReplyText(e.target.value); }}
                       placeholder={"给 TA 写一封回信。\n对方将以瓶友的方式收到，从此你们的对话保留在「瓶友」tab。"}
+                      className="letter-textarea"
                       style={{
                         width: '100%', minHeight: 180,
-                        background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.22)',
+                        background: 'rgba(255,255,255,0.10)', border: '0.5px solid rgba(255,255,255,0.32)',
                         borderRadius: 10, padding: '16px 18px',
-                        fontSize: 16, lineHeight: 1.9, color: '#fff', letterSpacing: 1,
+                        fontSize: 16, lineHeight: 1.9, color: 'rgba(255,255,255,0.98)', letterSpacing: 1,
                         outline: 'none', resize: 'vertical',
+                        textShadow: '0 1px 4px rgba(0,0,0,0.55)',
                       }}
                     />
                     <div style={{ marginTop: 18, paddingTop: 14, borderTop: '0.5px dashed rgba(255,255,255,0.18)' }}>
@@ -177,7 +211,7 @@ export default function Pick() {
                             background: replyMood === m ? 'rgba(255,255,255,0.94)' : 'transparent',
                             cursor: 'pointer',
                             fontFamily: replyMood === m ? '"Source Han Serif CN VF Medium", serif' : 'inherit',
-                          }}>{m}</button>
+                          }}><span style={{ marginRight: 4, opacity: 0.85 }}>{REPLY_EMOJI[m]}</span>{m}</button>
                         ))}
                       </div>
                     </div>

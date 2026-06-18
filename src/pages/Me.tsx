@@ -14,6 +14,8 @@ export default function Me() {
   const nav = useNavigate();
   const isNarrow = useIsNarrow();
   const [stats, setStats] = useState({ thrown: 0, picked: 0, friends: 0 });
+  const [invite, setInvite] = useState<{ code: string; quota: number; used: number; remaining: number } | null>(null);
+  const [inviteCopied, setInviteCopied] = useState(false);
   const [sheet, setSheet] = useState<'privacy' | 'block' | 'logout' | 'delete' | null>(null);
   const [blockList, setBlockList] = useState<{ id: string; bottleNo: string; createdAt: string }[]>([]);
 
@@ -73,6 +75,37 @@ export default function Me() {
     return () => { cancelled = true; };
   }, [profile]);
 
+  // 拉邀请码信息
+  useEffect(() => {
+    if (!profile) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.rpc('get_my_invite_info' as any);
+      if (cancelled || error) return;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row) {
+        setInvite({
+          code: row.my_code,
+          quota: Number(row.quota) || 0,
+          used: Number(row.used) || 0,
+          remaining: Number(row.remaining) || 0,
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [profile]);
+
+  async function copyInviteCode() {
+    if (!invite) return;
+    try {
+      await navigator.clipboard.writeText(invite.code);
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 1800);
+    } catch {
+      toast.error('复制失败，请手动选中复制');
+    }
+  }
+
   async function unblock(blockId: string) {
     try {
       const { error } = await supabase.from('blocks').delete().eq('id', blockId);
@@ -123,8 +156,56 @@ export default function Me() {
           ))}
         </div>
 
+        {/* 邀请码卡片 */}
+        {invite && (
+          <div style={{
+            marginBottom: isNarrow ? 36 : 56,
+            background: 'rgba(255,255,255,0.06)',
+            backdropFilter: 'blur(20px)',
+            border: '0.5px solid rgba(255,255,255,0.12)',
+            borderRadius: 16,
+            padding: isNarrow ? '20px 18px 18px' : '26px 28px 22px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: isNarrow ? 13 : 14, color: 'rgba(255,255,255,0.62)', letterSpacing: 3 }}>my invite code</div>
+              <div style={{ fontSize: isNarrow ? 11 : 12, color: 'rgba(255,255,255,0.5)', letterSpacing: 1 }}>
+                {invite.quota >= 99999 ? `已邀请 ${invite.used} 人` : `${invite.used} / ${invite.quota}`}
+              </div>
+            </div>
+
+            <div onClick={copyInviteCode} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+              padding: isNarrow ? '14px' : '18px',
+              background: 'rgba(255,255,255,0.08)',
+              border: '0.5px solid rgba(255,255,255,0.2)',
+              borderRadius: 12,
+              cursor: 'pointer',
+              userSelect: 'all',
+            }}>
+              <span style={{
+                fontFamily: "'Cormorant Garamond', serif",
+                fontSize: isNarrow ? 26 : 32,
+                color: '#fff',
+                letterSpacing: 8,
+                fontWeight: 300,
+              }}>{invite.code}</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', letterSpacing: 1 }}>
+                {inviteCopied ? '已复制' : '点击复制'}
+              </span>
+            </div>
+
+            <div style={{ marginTop: 12, fontSize: isNarrow ? 12 : 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7, letterSpacing: 0.5 }}>
+              {invite.quota >= 99999
+                ? '你的邀请码可无限邀请鹅厂同事'
+                : invite.remaining > 0
+                  ? `把这个码分享给鹅厂同事，还能邀请 ${invite.remaining} 人`
+                  : '邀请名额已用完'}
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <MenuRow label="关于非鹅勿扰漂流瓶" onClick={() => nav('/')} narrow={isNarrow} />
+          <MenuRow label="关于非鹅勿扰漂流瓶" onClick={() => nav('/?about=1')} narrow={isNarrow} />
           <MenuRow label="隐私说明" onClick={() => setSheet('privacy')} narrow={isNarrow} />
           <MenuRow label="拉黑列表" onClick={() => setSheet('block')} narrow={isNarrow} />
           <MenuRow label="退出登录" onClick={() => setSheet('logout')} narrow={isNarrow} />
@@ -230,15 +311,31 @@ function BlockListContent({ items, onUnblock }: { items: any[]; onUnblock: (id: 
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.5)' }}>还没有拉黑过任何人</div>
       ) : (
         <div>
-          {items.map(it => (
-            <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.12)' }}>
-              <div>
-                <div style={{ fontSize: 15, letterSpacing: 2 }}>No. <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>{it.bottleNo}</em></div>
-                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{it.createdAt}</div>
+          {items.map(it => {
+            const gone = !it.bottleNo || it.bottleNo === '----';
+            return (
+              <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: '0.5px solid rgba(255,255,255,0.12)', opacity: gone ? 0.55 : 1 }}>
+                <div>
+                  <div style={{ fontSize: 15, letterSpacing: 2 }}>
+                    {gone ? <span style={{ color: 'rgba(255,255,255,0.6)' }}>该用户已离开</span> :
+                      <>No. <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>{it.bottleNo}</em></>}
+                  </div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{it.createdAt}</div>
+                </div>
+                <button
+                  onClick={() => onUnblock(it.id)}
+                  disabled={gone}
+                  style={{
+                    background: 'transparent',
+                    border: '0.5px solid rgba(255,255,255,0.4)',
+                    color: gone ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.85)',
+                    padding: '6px 14px', borderRadius: 999, fontSize: 12, letterSpacing: 2,
+                    cursor: gone ? 'not-allowed' : 'pointer',
+                  }}
+                >解除</button>
               </div>
-              <button onClick={() => onUnblock(it.id)} style={{ background: 'transparent', border: '0.5px solid rgba(255,255,255,0.4)', color: 'rgba(255,255,255,0.85)', padding: '6px 14px', borderRadius: 999, fontSize: 12, letterSpacing: 2, cursor: 'pointer' }}>解除</button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import BgVideo from '../components/BgVideo';
 import AppNav from '../components/AppNav';
 import Avatar from '../components/Avatar';
@@ -20,6 +20,7 @@ interface FriendItem {
 
 export default function Friends() {
   const { profile } = useAuth();
+  const loc = useLocation();
   const [friends, setFriends] = useState<FriendItem[]>([]);
   const [loading, setLoading] = useState(true);
   const isNarrow = useIsNarrow();
@@ -76,7 +77,7 @@ export default function Friends() {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', load);
     };
-  }, [profile]);
+  }, [profile, loc.key]);
 
   const active = friends.filter(f => !f.ended);
   const ended = friends.filter(f => f.ended);
@@ -97,9 +98,27 @@ export default function Friends() {
         </div>
 
         {!loading && friends.length === 0 && (
-          <div style={{ textAlign: 'center', marginTop: isNarrow ? 40 : 80, padding: isNarrow ? '40px 16px' : '60px 20px', fontSize: 14, color: 'rgba(255,255,255,0.5)', letterSpacing: isNarrow ? 2 : 4 }}>
-            还没有瓶友。<br/>
-            <Link to="/" style={{ color: 'rgba(255,255,255,0.85)', borderBottom: '0.5px solid rgba(255,255,255,0.4)', textDecoration: 'none', marginTop: 16, display: 'inline-block' }}>去海边看看 →</Link>
+          <div style={{ textAlign: 'center', marginTop: isNarrow ? 40 : 80, padding: isNarrow ? '40px 16px' : '60px 20px', color: 'rgba(255,255,255,0.7)' }}>
+            <div style={{
+              fontSize: isNarrow ? 15 : 17,
+              lineHeight: 2, letterSpacing: 2,
+              fontFamily: '"Source Han Serif CN VF Light", serif',
+              color: 'rgba(255,255,255,0.85)',
+              textShadow: '0 1px 8px rgba(0,0,0,0.5)',
+            }}>
+              这片海还很安静。<br/>
+              你的瓶子正在漂——<br/>
+              也许明天会有人捡到。
+            </div>
+            <Link to="/" style={{
+              display: 'inline-block', marginTop: 28,
+              fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic',
+              fontSize: 14, letterSpacing: 3,
+              color: 'rgba(255,255,255,0.78)',
+              textDecoration: 'none',
+              borderBottom: '0.5px solid rgba(255,255,255,0.4)',
+              paddingBottom: 2,
+            }}>back to the sea →</Link>
           </div>
         )}
 
@@ -108,31 +127,34 @@ export default function Friends() {
             <Link
               key={f.conversationId}
               to={`/chat/${f.conversationId}${f.ended ? '?ended=1' : ''}`}
+              className="tap-card"
               style={{
                 display: 'flex', alignItems: 'center', gap: isNarrow ? 12 : 20,
                 padding: isNarrow ? '14px 14px' : '22px 24px',
-                background: f.unread > 0 && !f.ended ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.06)',
+                background: f.unread > 0 && !f.ended ? 'rgba(255,255,255,0.11)' : 'rgba(255,255,255,0.06)',
                 backdropFilter: 'blur(20px)',
-                border: f.unread > 0 && !f.ended ? '0.5px solid rgba(255,200,120,0.35)' : '0.5px solid rgba(255,255,255,0.12)',
+                border: f.unread > 0 && !f.ended ? '0.5px solid rgba(255,255,255,0.28)' : '0.5px solid rgba(255,255,255,0.12)',
                 borderRadius: 12, color: '#fff',
                 textDecoration: 'none',
                 opacity: f.ended ? 0.55 : 1,
                 position: 'relative',
+                boxShadow: f.unread > 0 && !f.ended ? 'inset 0 1px 0 rgba(255,255,255,0.18), 0 0 0 0.5px rgba(255,255,255,0.06)' : 'none',
               }}
             >
               <div style={{ position: 'relative' }}>
                 <Avatar color={f.avatarColor} size={isNarrow ? 40 : 52} />
                 {f.unread > 0 && !f.ended && (
-                  <div style={{
-                    position: 'absolute', top: -2, right: -2,
-                    minWidth: 18, height: 18, padding: '0 5px',
-                    background: 'rgba(220, 110, 90, 0.95)',
-                    borderRadius: 999, color: '#fff',
-                    fontSize: 11, fontWeight: 500,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(220, 110, 90, 0.55)',
-                    border: '1.5px solid rgba(20, 30, 45, 0.9)',
-                  }}>{f.unread > 99 ? '99+' : f.unread}</div>
+                  // 玻璃风微光：柔和奶白 + 渐隐光晕，呼吸动画
+                  <span
+                    aria-label={`${f.unread} 条未读`}
+                    style={{
+                      position: 'absolute', top: 0, right: 0,
+                      width: 10, height: 10, borderRadius: 999,
+                      background: 'rgba(255, 252, 240, 0.95)',
+                      boxShadow: '0 0 0 2px rgba(20,30,45,0.65), 0 0 12px rgba(255, 240, 200, 0.7)',
+                      animation: 'softPulse 2.4s ease-in-out infinite',
+                    }}
+                  />
                 )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -141,18 +163,27 @@ export default function Friends() {
                   {f.speaker === 'new' && !f.ended && (
                     <span style={{
                       fontSize: 10, padding: '2px 8px', borderRadius: 999,
-                      background: 'rgba(255,200,120,0.18)',
-                      border: '0.5px solid rgba(255,200,120,0.45)',
-                      color: 'rgba(255,220,170,0.95)',
+                      background: 'rgba(255,255,255,0.10)',
+                      backdropFilter: 'blur(12px)',
+                      border: '0.5px solid rgba(255,255,255,0.32)',
+                      color: 'rgba(255,255,255,0.92)',
                       letterSpacing: 2,
-                    }}>新瓶友</span>
+                      fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic',
+                    }}>new</span>
+                  )}
+                  {f.unread > 0 && f.speaker !== 'new' && !f.ended && (
+                    <span style={{
+                      fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic',
+                      fontSize: 12, color: 'rgba(255, 240, 200, 0.85)',
+                      letterSpacing: 1,
+                    }}>· {f.unread > 9 ? '9+' : f.unread} new</span>
                   )}
                 </div>
                 <div style={{ fontSize: isNarrow ? 12 : 13, color: 'rgba(255,255,255,0.62)', letterSpacing: 1, lineHeight: 1.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {f.ended
                     ? '这段漂流结束了 · 记录已保留'
                     : f.speaker === 'new'
-                      ? <span style={{ color: 'rgba(255,220,170,0.85)' }}>TA 捡到了你的瓶子，等待回信</span>
+                      ? <span style={{ color: 'rgba(255,240,210,0.88)' }}>TA 捡到了你的瓶子，等待回信</span>
                       : <><span style={{ color: 'rgba(255,255,255,0.5)', marginRight: 6 }}>{f.speaker === 'me' ? '你：' : 'TA：'}</span>{f.preview}</>
                   }
                 </div>
