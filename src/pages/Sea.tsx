@@ -131,25 +131,34 @@ export default function Sea() {
           flexWrap: 'nowrap',
           whiteSpace: 'nowrap',
         }}>
-          {thrown >= 3 ? (
+          {thrown >= 3 && picked >= 3 ? (
+            /* 扔和捞都用完了 → 只显示一个瓶友按钮 */
             <Link to="/friends" className="btn btn-primary">
               看看你的瓶友
             </Link>
           ) : (
-            <Link to="/throw" className="btn btn-primary">
-              扔一个瓶子
-              <span style={quotaInline}>{3 - thrown} / 3</span>
-            </Link>
-          )}
-          {picked >= 3 ? (
-            <Link to="/friends" className="btn btn-ghost">
-              看看你的瓶友
-            </Link>
-          ) : (
-            <Link to="/pick" className="btn btn-ghost">
-              捞一个瓶子
-              <span style={quotaInline}>{3 - picked} / 3</span>
-            </Link>
+            <>
+              {thrown >= 3 ? (
+                <Link to="/friends" className="btn btn-primary">
+                  看看你的瓶友
+                </Link>
+              ) : (
+                <Link to="/throw" className="btn btn-primary">
+                  扔一个瓶子
+                  <span style={quotaInline}>{3 - thrown} / 3</span>
+                </Link>
+              )}
+              {picked >= 3 ? (
+                <Link to="/friends" className="btn btn-ghost">
+                  看看你的瓶友
+                </Link>
+              ) : (
+                <Link to="/pick" className="btn btn-ghost">
+                  捞一个瓶子
+                  <span style={quotaInline}>{3 - picked} / 3</span>
+                </Link>
+              )}
+            </>
           )}
         </div>
       </main>
