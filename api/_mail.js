@@ -4,12 +4,12 @@ let transporter = null;
 export function getTransporter() {
   if (transporter) return transporter;
   transporter = nodemailer.createTransport({
-    host: 'smtp.exmail.qq.com',
-    port: 465,
-    secure: true,
+    host: 'smtpdm.aliyun.com',
+    port: 80,
+    secure: false,
     auth: {
-      user: process.env.MAIL_USER || 'admin@feiewurao.cn',
-      pass: process.env.MAIL_PASS || '',
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
     },
   });
   return transporter;
