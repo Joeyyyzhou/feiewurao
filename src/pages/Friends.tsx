@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import BgVideo from '../components/BgVideo';
 import AppNav from '../components/AppNav';
@@ -24,60 +24,87 @@ export default function Friends() {
   const [friends, setFriends] = useState<FriendItem[]>([]);
   const [loading, setLoading] = useState(true);
   const isNarrow = useIsNarrow();
+  const cancelledRef = useRef(false);
+  const profileIdRef = useRef<string | null>(null);
+  profileIdRef.current = profile?.id ?? null;
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!profile) return;
-    let cancelled = false;
-    const load = async () => {
-      // 一次性 RPC：拉所有 conv + 对方信息 + 最后一条消息 + 未读数
-      const { data, error } = await supabase.rpc('list_my_conversations' as any);
-      if (cancelled) return;
-      if (error || !data) {
-        // 兜底：旧逻辑（不会有未读数）
-        const { data: convs } = await supabase
-          .from('conversations')
-          .select('id, status, created_at, ended_at, user_a, user_b')
-          .or(`user_a.eq.${profile.id},user_b.eq.${profile.id}`)
-          .order('created_at', { ascending: false });
-        if (!convs) { setLoading(false); return; }
-        const items = convs.map((c: any) => ({
-          conversationId: c.id, bottleNo: '----', avatarColor: 'c1',
-          preview: '', speaker: 'new' as const, time: relativeTime(c.created_at),
-          ended: c.status === 'ended', unread: 0,
-        }));
-        setFriends(items);
-        setLoading(false);
-        return;
-      }
+    cancelledRef.current = false;
+    setLoading(true);
 
-      const items: FriendItem[] = (data as any[]).map((row) => {
-        const hasMsg = !!row.last_msg_content;
-        return {
-          conversationId: row.conversation_id,
-          bottleNo: row.other_no ?? '----',
-          avatarColor: row.other_avatar_color ?? 'c1',
-          preview: hasMsg ? String(row.last_msg_content).slice(0, 28) : '',
-          speaker: hasMsg ? (row.last_msg_sender === profile.id ? 'me' : 'them') : 'new',
-          time: relativeTime(row.ended_at ?? row.last_msg_at ?? row.conv_created_at),
-          ended: row.status === 'ended',
-          unread: Number(row.unread_count) || 0,
-        };
-      });
+    const { data, error } = await supabase.rpc('list_my_conversations' as any);
+    if (cancelledRef.current || !profileIdRef.current) return;
+
+    if (error || !data) {
+      const { data: convs } = await supabase
+        .from('conversations')
+        .select('id, status, created_at, ended_at, user_a, user_b')
+        .or(`user_a.eq.${profile.id},user_b.eq.${profile.id}`)
+        .order('created_at', { ascending: false });
+      if (!convs) { setLoading(false); return; }
+      const items = convs.map((c: any) => ({
+        conversationId: c.id, bottleNo: '----', avatarColor: 'c1',
+        preview: '', speaker: 'new' as const, time: relativeTime(c.created_at),
+        ended: c.status === 'ended', unread: 0,
+      }));
       setFriends(items);
       setLoading(false);
-    };
+      return;
+    }
 
+    const items: FriendItem[] = (data as any[]).map((row) => {
+      const hasMsg = !!row.last_msg_content;
+      return {
+        conversationId: row.conversation_id,
+        bottleNo: row.other_no ?? '----',
+        avatarColor: row.other_avatar_color ?? 'c1',
+        preview: hasMsg ? String(row.last_msg_content).slice(0, 28) : '',
+        speaker: hasMsg ? (row.last_msg_sender === profile.id ? 'me' : 'them') : 'new',
+        time: relativeTime(row.ended_at ?? row.last_msg_at ?? row.conv_created_at),
+        ended: row.status === 'ended',
+        unread: Number(row.unread_count) || 0,
+      };
+    });
+    setFriends(items);
+    setLoading(false);
+  }, [profile]);
+
+  // 初始加载 + 路由返回时刷新
+  useEffect(() => {
+    if (!profile) return;
+    cancelledRef.current = false;
     load();
-    // 切回标签 / 路由回到这里时也刷新（瓶友列表可能有新消息）
+
     const onVisible = () => { if (!document.hidden) load(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', load);
+
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', load);
     };
-  }, [profile, loc.key]);
+  }, [profile, loc.key, load]);
+
+  // Realtime 订阅：新消息到达时实时刷新红点
+  useEffect(() => {
+    if (!profile) return;
+    const channel = supabase
+      .channel('friends:messages')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload: any) => {
+          // 只处理别人发来的消息
+          if (payload.new?.sender_id !== profileIdRef.current) {
+            load();
+          }
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [profile, load]);
 
   const active = friends.filter(f => !f.ended);
   const ended = friends.filter(f => f.ended);

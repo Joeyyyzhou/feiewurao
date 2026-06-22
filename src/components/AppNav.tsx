@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIsNarrow } from '../lib/useIsNarrow';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
@@ -13,6 +13,8 @@ export default function AppNav() {
 
   const [countdown, setCountdown] = useState({ h: '--', m: '--' });
   const [unread, setUnread] = useState(0);
+  const profileIdRef = useRef<string | null>(null);
+  profileIdRef.current = profile?.id ?? null;
 
   useEffect(() => {
     function tick() {
@@ -30,15 +32,16 @@ export default function AppNav() {
     return () => clearInterval(id);
   }, []);
 
-  // 拉总未读数（瓶友 tab 红点）
+  const fetchUnread = useCallback(async () => {
+    if (!profileIdRef.current) { setUnread(0); return; }
+    const { data, error } = await supabase.rpc('count_unread_conversations' as any);
+    if (!error) setUnread(Number(data) || 0);
+  }, []);
+
+  // 拉总未读数（瓶友 tab 红点）：轮询 + 路由变化 + 焦点返回
   useEffect(() => {
     if (!profile) { setUnread(0); return; }
-    const fetchUnread = async () => {
-      const { data, error } = await supabase.rpc('count_unread_conversations' as any);
-      if (!error) setUnread(Number(data) || 0);
-    };
     fetchUnread();
-    // 进入瓶友 tab 后，本来应该把 unread 清空；这里依赖路由变化重拉一次
     const id = setInterval(fetchUnread, 30000);
     const onVisible = () => { if (!document.hidden) fetchUnread(); };
     document.addEventListener('visibilitychange', onVisible);
@@ -48,7 +51,25 @@ export default function AppNav() {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', fetchUnread);
     };
-  }, [profile, path]);
+  }, [profile, path, fetchUnread]);
+
+  // Realtime：新消息到达时立即刷新未读数（红点实时出现）
+  useEffect(() => {
+    if (!profile) return;
+    const channel = supabase
+      .channel('appnav:messages')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload: any) => {
+          if (payload.new?.sender_id !== profileIdRef.current) {
+            fetchUnread();
+          }
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [profile, fetchUnread]);
 
   return (
     <nav className="app-nav">
