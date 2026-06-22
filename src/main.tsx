@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import App from './App';
 import Landing from './pages/Landing';
 import Register from './pages/Register';
+import ApplyInvite from './pages/ApplyInvite';
+import ForgotPassword from './pages/ForgotPassword';
 import Sea from './pages/Sea';
 import Friends from './pages/Friends';
 import Me from './pages/Me';
@@ -32,6 +34,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/" element={<App />}>
               <Route index element={<HomeRoute />} />
               <Route path="register" element={<Register />} />
+              <Route path="apply" element={<ApplyInvite />} />
+              <Route path="forgot-password" element={<ForgotPassword />} />
               <Route path="sea" element={<RequireAuth><Sea /></RequireAuth>} />
               <Route path="friends" element={<RequireAuth><Friends /></RequireAuth>} />
               <Route path="me" element={<RequireAuth><Me /></RequireAuth>} />

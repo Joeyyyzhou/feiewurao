@@ -24,6 +24,13 @@ body {
   caret-color: rgba(255, 255, 255, 0.95);
 }
 
+/* Cormorant Garamond 默认是 OldStyle Numerals（数字 1 在大字号下看起来像 I），
+   强制 lining-nums 让数字回到标准对齐字形。tabular-nums 让等宽，便于统计数列对齐。 */
+[style*="Cormorant"],
+[style*="cormorant"] {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
 /* 列表卡片的触摸反馈：移动端按下时轻微缩放 + tap-highlight 抑制 */
 .tap-card {
   -webkit-tap-highlight-color: rgba(255, 255, 255, 0.06);

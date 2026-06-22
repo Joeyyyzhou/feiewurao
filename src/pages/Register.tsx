@@ -142,6 +142,42 @@ export default function Register() {
           >
             {submitting ? '处理中…' : (mode === 'register' ? '进入海面' : '登录')}
           </button>
+
+          {mode === 'login' && (
+            <div style={{ marginTop: 16, textAlign: 'center' }}>
+              <a
+                onClick={() => nav('/forgot-password')}
+                style={{
+                  cursor: 'pointer',
+                  fontSize: 12, letterSpacing: 2,
+                  color: 'rgba(255,255,255,0.55)',
+                  textDecoration: 'underline',
+                  textDecorationColor: 'rgba(255,255,255,0.25)',
+                  textUnderlineOffset: 4,
+                }}
+              >
+                忘记密码？
+              </a>
+            </div>
+          )}
+
+          {mode === 'register' && (
+            <div style={{ marginTop: 16, textAlign: 'center' }}>
+              <a
+                onClick={() => nav('/apply')}
+                style={{
+                  cursor: 'pointer',
+                  fontSize: 12, letterSpacing: 2,
+                  color: 'rgba(255,255,255,0.55)',
+                  textDecoration: 'underline',
+                  textDecorationColor: 'rgba(255,255,255,0.25)',
+                  textUnderlineOffset: 4,
+                }}
+              >
+                没有邀请码？申请一个
+              </a>
+            </div>
+          )}
         </div>
 
         <div style={{ marginTop: 32, textAlign: 'center', fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: 2, lineHeight: 1.8 }}>

@@ -150,7 +150,14 @@ export default function Me() {
             ['瓶友', stats.friends],
           ].map(([label, n]) => (
             <div key={String(label)} style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isNarrow ? 28 : 38, color: '#fff', fontWeight: 300, letterSpacing: 0.5 }}>{n as number}</div>
+              <div style={{
+                fontFamily: "'Cormorant Garamond', serif",
+                fontSize: isNarrow ? 28 : 38,
+                color: '#fff',
+                fontWeight: 300,
+                letterSpacing: 0.5,
+                fontVariantNumeric: 'lining-nums tabular-nums',
+              }}>{n as number}</div>
               <div style={{ fontSize: isNarrow ? 11 : 13, color: 'rgba(255,255,255,0.6)', letterSpacing: isNarrow ? 2 : 4, marginTop: 6 }}>{label}</div>
             </div>
           ))}

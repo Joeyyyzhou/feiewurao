@@ -237,90 +237,78 @@ function Verse({ children }: { children: React.ReactNode }) {
 }
 
 function FlowDiagram() {
-  // 漂流瓶完整旅程：写信 → 扔瓶 → 海里随机 → 被人捞起 → 回信(成瓶友) / 放回海(继续漂)
+  // 重写：横向 3 步主流程 + 末端两种结局。所有图标在同一基线上对齐，箭头平直清晰，
+  // 不再有交叉曲线/堆叠的"drift…"文字。viewBox 540×240，留足边距。
   return (
     <div style={{ marginTop: 14 }}>
-      <svg viewBox="0 0 480 220" width="100%" style={{ display: 'block' }} aria-label="漂流瓶流程">
+      <svg viewBox="0 0 540 240" width="100%" style={{ display: 'block' }} aria-label="漂流瓶流程">
         <defs>
-          <linearGradient id="seaGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.10)" />
-            <stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
-          </linearGradient>
           <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" fill="rgba(255,255,255,0.85)" />
           </marker>
         </defs>
 
-        {/* 海面背景条 */}
-        <rect x="0" y="92" width="460" height="40" fill="url(#seaGrad)" />
-        <path d="M0 102 Q 30 96 60 102 T 120 102 T 180 102 T 240 102 T 300 102 T 360 102 T 420 102 T 480 102"
-              stroke="rgba(255,255,255,0.35)" strokeWidth="0.7" fill="none" />
+        {/* ===== 主流程：写信 → 扔进海 → 被同事捞起 ===== */}
+        {/* 三个节点圆心 y=50，半径 22 */}
 
-        {/* 节点 1：写信 */}
+        {/* 1. 写信 */}
         <g>
-          <circle cx="46" cy="44" r="22" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.7" />
-          {/* 信纸图标 */}
-          <rect x="36" y="34" width="20" height="18" rx="2" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1" />
-          <line x1="40" y1="40" x2="52" y2="40" stroke="rgba(255,255,255,0.95)" strokeWidth="0.8" />
-          <line x1="40" y1="44" x2="52" y2="44" stroke="rgba(255,255,255,0.95)" strokeWidth="0.8" />
-          <line x1="40" y1="48" x2="48" y2="48" stroke="rgba(255,255,255,0.95)" strokeWidth="0.8" />
-          <text x="46" y="86" fill="#fff" fontSize="11" textAnchor="middle" letterSpacing="2">写信</text>
+          <circle cx="80" cy="50" r="22" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.7" />
+          <rect x="70" y="40" width="20" height="18" rx="2" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1" />
+          <line x1="74" y1="46" x2="86" y2="46" stroke="rgba(255,255,255,0.95)" strokeWidth="0.8" />
+          <line x1="74" y1="50" x2="86" y2="50" stroke="rgba(255,255,255,0.95)" strokeWidth="0.8" />
+          <line x1="74" y1="54" x2="82" y2="54" stroke="rgba(255,255,255,0.95)" strokeWidth="0.8" />
+          <text x="80" y="92" fill="#fff" fontSize="11" textAnchor="middle" letterSpacing="2">写信</text>
         </g>
 
-        {/* 节点 2：扔瓶进海 */}
+        {/* 2. 扔进海 */}
         <g>
-          <circle cx="160" cy="44" r="22" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.7" />
-          {/* 瓶子图标 */}
-          <path d="M156 32 L156 36 L154 38 L154 56 Q154 58 156 58 L164 58 Q166 58 166 56 L166 38 L164 36 L164 32 Z"
+          <circle cx="270" cy="50" r="22" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.7" />
+          {/* 瓶子图标：居中在 (270,50) 周围 */}
+          <path d="M266 38 L266 42 L264 44 L264 62 Q264 64 266 64 L274 64 Q276 64 276 62 L276 44 L274 42 L274 38 Z"
                 fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1" />
-          <rect x="155" y="46" width="10" height="6" fill="rgba(255,255,255,0.45)" />
-          <text x="160" y="86" fill="#fff" fontSize="11" textAnchor="middle" letterSpacing="2">匿名扔进海</text>
+          <rect x="265" y="52" width="10" height="6" fill="rgba(255,255,255,0.45)" />
+          <text x="270" y="92" fill="#fff" fontSize="11" textAnchor="middle" letterSpacing="2">匿名扔进海</text>
         </g>
 
-        {/* 节点 3：海里漂流（中间是海） */}
+        {/* 3. 被捞起 */}
         <g>
-          <circle cx="274" cy="112" r="20" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.45)" strokeWidth="0.5" strokeDasharray="3 3" />
-          {/* 小波浪 */}
-          <path d="M262 112 q 4 -4 8 0 t 8 0 t 8 0" stroke="rgba(255,255,255,0.85)" strokeWidth="1" fill="none" />
-          <text x="274" y="148" fill="rgba(255,255,255,0.85)" fontSize="10.5" textAnchor="middle" letterSpacing="2" fontStyle="italic" fontFamily="'Cormorant Garamond', serif">drift…</text>
+          <circle cx="460" cy="50" r="22" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.7" />
+          {/* 手图标：简化 — 五指 + 手掌 */}
+          <path d="M450 50 L450 42 Q450 40 452 40 Q454 40 454 42 L454 38 Q454 36 456 36 Q458 36 458 38 L458 42 L458 36 Q458 34 460 34 Q462 34 462 36 L462 42 L462 38 Q462 36 464 36 Q466 36 466 38 L466 50 Q466 56 460 56 L456 56 Q450 56 450 50 Z"
+                fill="rgba(255,255,255,0.92)" />
+          <text x="460" y="92" fill="#fff" fontSize="11" textAnchor="middle" letterSpacing="2">被同事捞起</text>
         </g>
 
-        {/* 节点 4：随机被捞 */}
+        {/* 两条平直箭头连接三个圆 */}
+        <line x1="106" y1="50" x2="242" y2="50" stroke="rgba(255,255,255,0.85)" strokeWidth="1" markerEnd="url(#arrow)" />
+        <line x1="296" y1="50" x2="432" y2="50" stroke="rgba(255,255,255,0.85)" strokeWidth="1" markerEnd="url(#arrow)" />
+
+        {/* "drift" 浮在第二个箭头上方一点点，作为氛围词，不和图标交叉 */}
+        <text x="365" y="42" fill="rgba(255,255,255,0.6)" fontSize="10" textAnchor="middle" letterSpacing="2"
+              fontStyle="italic" fontFamily="'Cormorant Garamond', serif">drift…</text>
+
+        {/* ===== 分叉：捞起后 TA 的两个选择 ===== */}
+        {/* 从"被捞起"节点向下分两路 */}
+        <line x1="460" y1="106" x2="460" y2="126" stroke="rgba(255,255,255,0.6)" strokeWidth="0.8" />
+        <line x1="180" y1="126" x2="460" y2="126" stroke="rgba(255,255,255,0.6)" strokeWidth="0.8" />
+        <line x1="180" y1="126" x2="180" y2="146" stroke="rgba(255,255,255,0.6)" strokeWidth="0.8" markerEnd="url(#arrow)" />
+        <line x1="380" y1="126" x2="380" y2="146" stroke="rgba(255,255,255,0.6)" strokeWidth="0.8" markerEnd="url(#arrow)" />
+
+        {/* 选项 A：回信 → 成瓶友（左下） */}
         <g>
-          <circle cx="388" cy="44" r="22" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.55)" strokeWidth="0.7" />
-          {/* 手图标 */}
-          <path d="M380 50 L380 40 Q380 38 382 38 Q384 38 384 40 L384 36 Q384 34 386 34 Q388 34 388 36 L388 40 L388 34 Q388 32 390 32 Q392 32 392 34 L392 42 L392 36 Q392 34 394 34 Q396 34 396 36 L396 50 Q396 56 390 56 L384 56 Q380 56 380 50 Z"
-                fill="rgba(255,255,255,0.95)" />
-          <text x="388" y="86" fill="#fff" fontSize="11" textAnchor="middle" letterSpacing="2">随机被同事捞起</text>
+          <rect x="80" y="152" width="200" height="60" rx="10"
+                fill="rgba(255, 195, 100, 0.16)" stroke="rgba(255, 215, 150, 0.6)" strokeWidth="0.7" />
+          <text x="180" y="176" fill="#ffd89a" fontSize="13" textAnchor="middle" letterSpacing="3" fontWeight="500">回信</text>
+          <text x="180" y="196" fill="rgba(255,235,200,0.95)" fontSize="11" textAnchor="middle" letterSpacing="1.5">从此你们是「瓶友」</text>
         </g>
 
-        {/* 箭头：写信 → 扔瓶 → 漂流 → 被捞 */}
-        <line x1="72" y1="44" x2="132" y2="44" stroke="rgba(255,255,255,0.85)" strokeWidth="1" markerEnd="url(#arrow)" />
-        <path d="M180 56 Q 218 90 254 108" stroke="rgba(255,255,255,0.85)" strokeWidth="1" fill="none" markerEnd="url(#arrow)" strokeDasharray="4 3" />
-        <path d="M294 108 Q 330 90 364 56" stroke="rgba(255,255,255,0.85)" strokeWidth="1" fill="none" markerEnd="url(#arrow)" strokeDasharray="4 3" />
-
-        {/* 分叉：回信 / 放回海 */}
-        <line x1="388" y1="68" x2="388" y2="118" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
-        <line x1="240" y1="118" x2="436" y2="118" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
-        <line x1="270" y1="118" x2="270" y2="138" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
-        <line x1="406" y1="118" x2="406" y2="138" stroke="rgba(255,255,255,0.85)" strokeWidth="1" />
-        <polygon points="270,140 266,134 274,134" fill="rgba(255,255,255,0.85)" />
-        <polygon points="406,140 402,134 410,134" fill="rgba(255,255,255,0.85)" />
-
-        {/* 终点 A：回信 → 成瓶友（左下） */}
+        {/* 选项 B：放回海 → 瓶子继续漂（右下） */}
         <g>
-          <rect x="206" y="142" width="128" height="56" rx="8"
-                fill="rgba(255, 195, 100, 0.18)" stroke="rgba(255, 215, 150, 0.65)" strokeWidth="0.7" />
-          <text x="270" y="164" fill="#ffd89a" fontSize="12" textAnchor="middle" letterSpacing="2" fontWeight="500">回信</text>
-          <text x="270" y="184" fill="rgba(255,235,200,0.95)" fontSize="10.5" textAnchor="middle" letterSpacing="1.5">成为「瓶友」</text>
-        </g>
-
-        {/* 终点 B：放回 → 继续漂（右下） */}
-        <g>
-          <rect x="342" y="142" width="128" height="56" rx="8"
-                fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.45)" strokeWidth="0.5" strokeDasharray="3 3" />
-          <text x="406" y="164" fill="rgba(255,255,255,0.92)" fontSize="12" textAnchor="middle" letterSpacing="2">放回海</text>
-          <text x="406" y="184" fill="rgba(255,255,255,0.7)" fontSize="10.5" textAnchor="middle" letterSpacing="1.5">瓶子继续漂</text>
+          <rect x="280" y="152" width="200" height="60" rx="10"
+                fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.38)" strokeWidth="0.5" strokeDasharray="3 3" />
+          <text x="380" y="176" fill="rgba(255,255,255,0.92)" fontSize="13" textAnchor="middle" letterSpacing="3">放回海</text>
+          <text x="380" y="196" fill="rgba(255,255,255,0.7)" fontSize="11" textAnchor="middle" letterSpacing="1.5">瓶子继续漂流</text>
         </g>
       </svg>
 

@@ -4,6 +4,7 @@ import BgVideo from '../components/BgVideo';
 import AppNav from '../components/AppNav';
 import AboutDrawer from '../components/AboutDrawer';
 import OceanWeather from '../components/OceanWeather';
+import FirstTimeIntro from '../components/FirstTimeIntro';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useIsNarrow } from '../lib/useIsNarrow';
@@ -154,6 +155,7 @@ export default function Sea() {
       </main>
 
       <AboutDrawer />
+      <FirstTimeIntro />
     </>
   );
 }
