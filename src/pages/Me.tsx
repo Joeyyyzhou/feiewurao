@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import BgVideo from '../components/BgVideo';
 import AppNav from '../components/AppNav';
 import Avatar from '../components/Avatar';
 import { supabase } from '../lib/supabase';
@@ -121,7 +120,6 @@ export default function Me() {
 
   return (
     <>
-      <BgVideo />
       <AppNav />
       <main style={{
         position: 'relative', zIndex: 1, minHeight: '100vh',

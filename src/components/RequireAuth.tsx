@@ -1,50 +1,34 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import BgVideo from './BgVideo';
 
 export default function RequireAuth({ children }: { children: JSX.Element }) {
   const { session, loading } = useAuth();
   if (loading) {
     return (
-      <>
-        <BgVideo />
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(10,20,35,0.82)',
+        backdropFilter: 'blur(12px)',
+        color: 'rgba(255,255,255,0.7)',
+      }}>
         <div style={{
-          position: 'relative', zIndex: 1,
-          minHeight: '100vh',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          color: 'rgba(255,255,255,0.85)',
-          letterSpacing: 4,
+          width: 28, height: 28,
+          border: '2px solid rgba(255,255,255,0.15)',
+          borderTopColor: 'rgba(255,255,255,0.7)',
+          borderRadius: '50%',
+          animation: 'spin 0.7s linear infinite',
+          marginBottom: 16,
+        }} />
+        <div style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontStyle: 'italic', fontSize: 13,
+          letterSpacing: 4, opacity: 0.6,
         }}>
-          <div style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontStyle: 'italic',
-            fontSize: 14,
-            color: 'rgba(255,255,255,0.62)',
-            letterSpacing: 6,
-            textShadow: '0 1px 12px rgba(0,0,0,0.5)',
-            marginBottom: 14,
-            textTransform: 'lowercase',
-          }}>
-            drifting back to the sea
-          </div>
-          <div style={{
-            display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center',
-          }}>
-            {[0, 1, 2].map(i => (
-              <span
-                key={i}
-                style={{
-                  width: 6, height: 6, borderRadius: 999,
-                  background: 'rgba(255, 252, 240, 0.85)',
-                  boxShadow: '0 0 8px rgba(255, 240, 200, 0.6)',
-                  animation: `softPulse 1.6s ease-in-out ${i * 0.2}s infinite`,
-                }}
-              />
-            ))}
-          </div>
+          drifting…
         </div>
-      </>
+      </div>
     );
   }
   if (!session) return <Navigate to="/register" replace />;

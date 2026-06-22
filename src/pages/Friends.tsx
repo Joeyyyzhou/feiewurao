@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import BgVideo from '../components/BgVideo';
 import AppNav from '../components/AppNav';
 import Avatar from '../components/Avatar';
 import { supabase } from '../lib/supabase';
@@ -111,7 +110,6 @@ export default function Friends() {
 
   return (
     <>
-      <BgVideo />
       <AppNav />
       <main style={{
         position: 'relative', zIndex: 1, minHeight: '100vh',

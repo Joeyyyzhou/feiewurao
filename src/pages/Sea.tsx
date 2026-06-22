@@ -1,6 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import BgVideo from '../components/BgVideo';
 import AppNav from '../components/AppNav';
 import AboutDrawer from '../components/AboutDrawer';
 import OceanWeather from '../components/OceanWeather';
@@ -69,7 +68,6 @@ export default function Sea() {
 
   return (
     <>
-      <BgVideo />
       <AppNav />
 
       {toastShow && (

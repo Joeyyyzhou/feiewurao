@@ -224,3 +224,8 @@ body {
   .nav-tabs { gap: 12px; }
   .btn { padding: 12px 18px; font-size: 14px; letter-spacing: 1.5px; }
 }
+
+/* 加载动画：旋转 */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
