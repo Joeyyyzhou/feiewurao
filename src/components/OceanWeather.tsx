@@ -63,9 +63,9 @@ export default function OceanWeather({ narrow }: { narrow?: boolean }) {
         boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
       }}
     >
-      <span style={{ opacity: 0.65 }}>今日海面</span>
+      <span style={{ opacity: 0.88 }}>今日海面</span>
       <span style={{ fontWeight: 500 }}>
-        {' '}<span style={{ opacity: 0.45 }}>{weather.phrase?.pct}%</span> 在 {weather.phrase?.mood}
+        {' '}<span style={{ opacity: 0.72 }}>{weather.phrase?.pct}%</span> 在 {weather.phrase?.mood}
       </span>
     </div>
   );
