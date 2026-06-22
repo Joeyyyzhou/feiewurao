@@ -17,58 +17,63 @@ export default function Me() {
   const [inviteCopied, setInviteCopied] = useState(false);
   const [sheet, setSheet] = useState<'privacy' | 'block' | 'logout' | 'delete' | null>(null);
   const [blockList, setBlockList] = useState<{ id: string; bottleNo: string; createdAt: string }[]>([]);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!profile) return;
+    setReady(true);
     let cancelled = false;
     (async () => {
-      // 优先走 get_my_stats RPC（绕过 bottles RLS 限制，能拿到「捞起的瓶子」真实数）
-      const { data: statsRow, error: statsErr } = await supabase.rpc('get_my_stats' as any);
-      if (cancelled) return;
-      if (!statsErr && statsRow) {
-        // RPC 返回数组（RETURNS TABLE）
-        const row = Array.isArray(statsRow) ? statsRow[0] : statsRow;
-        if (row) {
+      try {
+        // 优先走 get_my_stats RPC（绕过 bottles RLS 限制，能拿到「捞起的瓶子」真实数）
+        const { data: statsRow, error: statsErr } = await supabase.rpc('get_my_stats' as any);
+        if (cancelled) return;
+        if (!statsErr && statsRow) {
+          const row = Array.isArray(statsRow) ? statsRow[0] : statsRow;
+          if (row) {
+            setStats({
+              thrown: Number(row.thrown) || 0,
+              picked: Number(row.picked) || 0,
+              friends: Number(row.friends) || 0,
+            });
+          }
+        } else {
+          // 兜底：旧逻辑
+          const [throwRes, pickRes, friendRes] = await Promise.all([
+            supabase.from('bottles').select('id', { count: 'exact', head: true }).eq('user_id', profile.id),
+            supabase.from('bottles').select('id', { count: 'exact', head: true }).eq('picked_by', profile.id),
+            supabase.from('conversations').select('id', { count: 'exact', head: true })
+              .or(`user_a.eq.${profile.id},user_b.eq.${profile.id}`),
+          ]);
+          if (cancelled) return;
           setStats({
-            thrown: Number(row.thrown) || 0,
-            picked: Number(row.picked) || 0,
-            friends: Number(row.friends) || 0,
+            thrown: throwRes.count ?? 0,
+            picked: pickRes.count ?? 0,
+            friends: friendRes.count ?? 0,
           });
         }
-      } else {
-        // 兜底：旧逻辑（picked 在未部署 RPC 时会因 RLS 显示为 0）
-        const [throwRes, pickRes, friendRes] = await Promise.all([
-          supabase.from('bottles').select('id', { count: 'exact', head: true }).eq('user_id', profile.id),
-          supabase.from('bottles').select('id', { count: 'exact', head: true }).eq('picked_by', profile.id),
-          supabase.from('conversations').select('id', { count: 'exact', head: true })
-            .or(`user_a.eq.${profile.id},user_b.eq.${profile.id}`),
-        ]);
-        if (cancelled) return;
-        setStats({
-          thrown: throwRes.count ?? 0,
-          picked: pickRes.count ?? 0,
-          friends: friendRes.count ?? 0,
-        });
-      }
 
-      // 拉黑列表
-      const { data: blocks } = await supabase
-        .from('blocks')
-        .select('id, blocked, created_at')
-        .eq('blocker', profile.id)
-        .order('created_at', { ascending: false });
-      if (blocks && blocks.length > 0) {
-        const { data: users, error: rpcErr } = await supabase.rpc('get_blocked_profiles' as any);
-        if (rpcErr) {
-          console.warn('[me] get_blocked_profiles error:', rpcErr.message);
+        // 拉黑列表
+        const { data: blocks } = await supabase
+          .from('blocks')
+          .select('id, blocked, created_at')
+          .eq('blocker', profile.id)
+          .order('created_at', { ascending: false });
+        if (blocks && blocks.length > 0) {
+          const { data: users, error: rpcErr } = await supabase.rpc('get_blocked_profiles' as any);
+          if (rpcErr) {
+            console.warn('[me] get_blocked_profiles error:', rpcErr.message);
+          }
+          const userMap = new Map<string, string>((users ?? []).map((u: any) => [u.id as string, u.bottle_no as string]));
+          if (cancelled) return;
+          setBlockList((blocks as any[]).map(b => ({
+            id: b.id as string,
+            bottleNo: userMap.get(b.blocked) ?? '----',
+            createdAt: relativeTime(b.created_at) + '拉黑',
+          })));
         }
-        const userMap = new Map<string, string>((users ?? []).map((u: any) => [u.id as string, u.bottle_no as string]));
-        if (cancelled) return;
-        setBlockList((blocks as any[]).map(b => ({
-          id: b.id as string,
-          bottleNo: userMap.get(b.blocked) ?? '----',
-          createdAt: relativeTime(b.created_at) + '拉黑',
-        })));
+      } catch (e: any) {
+        console.warn('[me] load error:', e?.message ?? e);
       }
     })();
     return () => { cancelled = true; };
@@ -126,6 +131,26 @@ export default function Me() {
         padding: isNarrow ? '90px 18px 60px' : '130px 56px 80px',
         maxWidth: 720, margin: '0 auto',
       }}>
+        {!ready ? (
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', minHeight: '50vh',
+            color: 'rgba(255,255,255,0.5)',
+          }}>
+            <div style={{
+              width: 24, height: 24,
+              border: '1.5px solid rgba(255,255,255,0.15)',
+              borderTopColor: 'rgba(255,255,255,0.6)',
+              borderRadius: '50%',
+              animation: 'spin 0.7s linear infinite',
+              marginBottom: 14,
+            }} />
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 13, letterSpacing: 4, opacity: 0.6 }}>
+              loading…
+            </div>
+          </div>
+        ) : (
+        <>
         <div style={{ textAlign: 'center', marginBottom: isNarrow ? 36 : 60 }}>
           {profile && <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}><Avatar color={profile.avatar_color} size={isNarrow ? 64 : 80} /></div>}
           <div style={{ fontSize: isNarrow ? 22 : 26, color: '#fff', letterSpacing: isNarrow ? 2 : 4, marginBottom: 6, textShadow: '0 2px 16px rgba(0,0,0,0.5)' }}>
@@ -220,6 +245,8 @@ export default function Me() {
           <a onClick={() => setSheet('delete')} style={{ fontSize: isNarrow ? 13 : 14, color: 'rgba(220,120,120,0.85)', letterSpacing: isNarrow ? 2 : 4, cursor: 'pointer' }}>注销账号</a>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 12, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginTop: 8 }}>all data permanently deleted</div>
         </div>
+        </>
+        )}
       </main>
 
       {sheet && (

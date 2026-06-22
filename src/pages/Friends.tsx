@@ -22,6 +22,7 @@ export default function Friends() {
   const loc = useLocation();
   const [friends, setFriends] = useState<FriendItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
   const isNarrow = useIsNarrow();
   const cancelledRef = useRef(false);
   const profileIdRef = useRef<string | null>(null);
@@ -32,46 +33,52 @@ export default function Friends() {
     cancelledRef.current = false;
     setLoading(true);
 
-    const { data, error } = await supabase.rpc('list_my_conversations' as any);
-    if (cancelledRef.current || !profileIdRef.current) return;
+    try {
+      const { data, error } = await supabase.rpc('list_my_conversations' as any);
+      if (cancelledRef.current || !profileIdRef.current) { setLoading(false); return; }
 
-    if (error || !data) {
-      const { data: convs } = await supabase
-        .from('conversations')
-        .select('id, status, created_at, ended_at, user_a, user_b')
-        .or(`user_a.eq.${profile.id},user_b.eq.${profile.id}`)
-        .order('created_at', { ascending: false });
-      if (!convs) { setLoading(false); return; }
-      const items = convs.map((c: any) => ({
-        conversationId: c.id, bottleNo: '----', avatarColor: 'c1',
-        preview: '', speaker: 'new' as const, time: relativeTime(c.created_at),
-        ended: c.status === 'ended', unread: 0,
-      }));
+      if (error || !data) {
+        const { data: convs } = await supabase
+          .from('conversations')
+          .select('id, status, created_at, ended_at, user_a, user_b')
+          .or(`user_a.eq.${profile.id},user_b.eq.${profile.id}`)
+          .order('created_at', { ascending: false });
+        if (!convs) { setLoading(false); return; }
+        const items = convs.map((c: any) => ({
+          conversationId: c.id, bottleNo: '----', avatarColor: 'c1',
+          preview: '', speaker: 'new' as const, time: relativeTime(c.created_at),
+          ended: c.status === 'ended', unread: 0,
+        }));
+        setFriends(items);
+        setLoading(false);
+        return;
+      }
+
+      const items: FriendItem[] = (data as any[]).map((row) => {
+        const hasMsg = !!row.last_msg_content;
+        return {
+          conversationId: row.conversation_id,
+          bottleNo: row.other_no ?? '----',
+          avatarColor: row.other_avatar_color ?? 'c1',
+          preview: hasMsg ? String(row.last_msg_content).slice(0, 28) : '',
+          speaker: hasMsg ? (row.last_msg_sender === profile.id ? 'me' : 'them') : 'new',
+          time: relativeTime(row.ended_at ?? row.last_msg_at ?? row.conv_created_at),
+          ended: row.status === 'ended',
+          unread: Number(row.unread_count) || 0,
+        };
+      });
       setFriends(items);
-      setLoading(false);
-      return;
+    } catch (e: any) {
+      console.warn('[friends] load error:', e?.message ?? e);
+    } finally {
+      if (!cancelledRef.current) setLoading(false);
     }
-
-    const items: FriendItem[] = (data as any[]).map((row) => {
-      const hasMsg = !!row.last_msg_content;
-      return {
-        conversationId: row.conversation_id,
-        bottleNo: row.other_no ?? '----',
-        avatarColor: row.other_avatar_color ?? 'c1',
-        preview: hasMsg ? String(row.last_msg_content).slice(0, 28) : '',
-        speaker: hasMsg ? (row.last_msg_sender === profile.id ? 'me' : 'them') : 'new',
-        time: relativeTime(row.ended_at ?? row.last_msg_at ?? row.conv_created_at),
-        ended: row.status === 'ended',
-        unread: Number(row.unread_count) || 0,
-      };
-    });
-    setFriends(items);
-    setLoading(false);
   }, [profile]);
 
   // 初始加载 + 路由返回时刷新
   useEffect(() => {
     if (!profile) return;
+    setReady(true);
     cancelledRef.current = false;
     load();
 
@@ -81,6 +88,7 @@ export default function Friends() {
 
     return () => {
       cancelledRef.current = true;
+      setLoading(false); // cleanup: ensure loading not stuck
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', load);
     };
@@ -119,10 +127,10 @@ export default function Friends() {
         <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: isNarrow ? 12 : 14, color: 'rgba(255,255,255,0.55)', letterSpacing: isNarrow ? 3 : 5, marginBottom: 8, textTransform: 'lowercase' }}>my drift letters</div>
         <h1 style={{ fontSize: isNarrow ? 26 : 36, color: '#fff', letterSpacing: isNarrow ? 4 : 8, marginBottom: 6, textShadow: '0 2px 20px rgba(0,0,0,0.5)' }}>瓶友</h1>
         <div style={{ fontSize: isNarrow ? 12 : 14, color: 'rgba(255,255,255,0.55)', letterSpacing: isNarrow ? 1 : 3, marginBottom: isNarrow ? 28 : 48 }}>
-          {loading ? '加载中…' : `${active.length} 段还在漂流的对话　·　${ended.length} 段已经结束`}
+          {!ready ? '加载中…' : loading ? '加载中…' : `${active.length} 段还在漂流的对话　·　${ended.length} 段已经结束`}
         </div>
 
-        {!loading && friends.length === 0 && (
+        {ready && !loading && friends.length === 0 && (
           <div style={{ textAlign: 'center', marginTop: isNarrow ? 40 : 80, padding: isNarrow ? '40px 16px' : '60px 20px', color: 'rgba(255,255,255,0.7)' }}>
             <div style={{
               fontSize: isNarrow ? 15 : 17,
@@ -147,6 +155,7 @@ export default function Friends() {
           </div>
         )}
 
+        {ready && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {friends.map(f => (
             <Link
@@ -217,6 +226,7 @@ export default function Friends() {
             </Link>
           ))}
         </div>
+        )}
       </main>
     </>
   );
