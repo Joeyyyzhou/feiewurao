@@ -9,7 +9,7 @@ import type { MessageRow } from '../lib/database.types';
 
 export default function Chat() {
   const { conversationId } = useParams();
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const toast = useToast();
   const loc = useLocation();
   const nav = useNavigate();
@@ -258,7 +258,7 @@ export default function Chat() {
       }}>
         {/* 对话起点：捞到的那个瓶子原文。用"纸张/信封"质感与普通气泡区分 */}
         {origin && (() => {
-          const fromMe = origin.authorId === profile?.id;
+          const fromMe = origin.authorId === (profile?.id ?? session?.user?.id);
           return (
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
               <div style={{
@@ -316,13 +316,14 @@ export default function Chat() {
         })()}
 
         {messages.map(m => {
-          const me = m.sender_id === profile?.id;
+          // 用 profile.id 优先，fallback 到 session.user.id（Supabase auth 自带，不会为空）
+          const myId = profile?.id ?? session?.user?.id;
+          const me = !!myId && m.sender_id === myId;
           const sending = me && String((m as any).id ?? '').startsWith('temp-');
           return (
             <div key={m.id} style={{ display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start', marginBottom: 18 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: me ? 'flex-end' : 'flex-start' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: me ? 'flex-end' : 'flex-start', maxWidth: isNarrow ? '78vw' : 'min(70vw, 480px)' }}>
                 <div style={{
-                  maxWidth: isNarrow ? '78vw' : 'min(70vw, 480px)',
                   padding: isNarrow ? '11px 16px' : '14px 20px',
                   fontSize: isNarrow ? 15 : 16,
                   lineHeight: 1.7, letterSpacing: 1,
@@ -330,9 +331,13 @@ export default function Chat() {
                   backdropFilter: 'blur(28px) saturate(1.4) brightness(0.95)',
                   WebkitBackdropFilter: 'blur(28px) saturate(1.4) brightness(0.95)',
                   boxShadow: '0 8px 24px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.08)',
-                  background: me ? 'rgba(120, 80, 56, 0.38)' : 'rgba(252, 246, 232, 0.32)',
+                  background: me
+                    ? 'rgba(180, 140, 100, 0.55)'
+                    : 'rgba(255, 255, 255, 0.18)',
                   color: '#fff',
-                  border: me ? '0.5px solid rgba(255, 220, 180, 0.28)' : '0.5px solid rgba(255,255,255,0.4)',
+                  border: me
+                    ? '0.5px solid rgba(255, 220, 180, 0.35)'
+                    : '0.5px solid rgba(255,255,255,0.35)',
                   borderTopLeftRadius: me ? 18 : 6,
                   borderTopRightRadius: me ? 6 : 18,
                   textShadow: '0 1px 3px rgba(0,0,0,0.45)',
