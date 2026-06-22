@@ -35,46 +35,31 @@ export default function FirstTimeIntro() {
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    // 先检查 localStorage（已看过直接跳过）
+    // localStorage 已看过 → 直接跳过
     try {
       if (localStorage.getItem(STORAGE_KEY)) return;
     } catch { /* noop */ }
 
-    // 再检查是不是老用户：有瓶子或对话记录就跳过
-    const userId = supabase.auth.getUser()?.then ? null : null;
-    // 用 session 检查
-    supabase.auth.getSession().then(({ data }: { data: { session: { user: { id: string } } | null } }) => {
-      if (!data.session) {
-        // 未登录也跳过（不应该到 Sea 页面）
-        return;
-      }
-      // 老用户检测：查有没有历史数据
-      supabase
+    // 已登录用户：检查是否有过任何操作（瓶子 / 对话），有就当老用户跳过
+    supabase.auth.getSession().then(async ({ data: sessionData }: { data: { session: { user: { id: string } } | null } }) => {
+      if (!sessionData?.session) return;
+
+      const uid = sessionData.session.user.id;
+      // 查有没有扔过或捞过瓶子
+      const { count } = await supabase
         .from('bottles')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', data.session.user.id)
-        .limit(1)
-        .then(() => {
-          // 简单策略：只要能进到 Sea 页面且没看过 intro 就展示
-          // 老用户如果之前没用过这个版本，第一次也会看到
-          // 但我们可以通过检查 created_at 来判断是否是真正的新用户
-          return supabase
-            .from('users')
-            .select('created_at')
-            .eq('id', data.session!.user.id)
-            .single()
-            .then(({ data: u }: { data: { created_at?: string } | null }) => {
-              if (!u || !u.created_at) { setOpen(true); return; }
-              // 注册超过 24 小时的算老用户，不弹
-              const age = Date.now() - new Date(u.created_at).getTime();
-              if (age > 24 * 60 * 60 * 1000) {
-                // 老用户，自动标记已读
-                try { localStorage.setItem(STORAGE_KEY, '1'); } catch { /* noop */ }
-                return;
-              }
-              setOpen(true);
-            });
-        });
+        .or(`user_id.eq.${uid},picked_by.eq.${uid}`)
+        .limit(1);
+
+      if ((count ?? 0) > 0) {
+        // 老用户，自动标记已读，不再弹
+        try { localStorage.setItem(STORAGE_KEY, '1'); } catch { /* noop */ }
+        return;
+      }
+
+      // 零记录 → 真正的新用户，展示引导
+      setOpen(true);
     });
   }, []);
 

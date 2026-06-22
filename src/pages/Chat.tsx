@@ -37,11 +37,12 @@ export default function Chat() {
     let unsub: (() => void) | null = null;
     (async () => {
       // 找出对方
-      const { data: conv } = await supabase
+      const { data: conv, error: convErr } = await supabase
         .from('conversations')
         .select('user_a, user_b')
         .eq('id', conversationId)
         .single();
+      if (convErr) console.warn('[chat] load conv error:', JSON.stringify(convErr));
       if (conv) {
         const otherId = (conv as any).user_a === profile.id ? (conv as any).user_b : (conv as any).user_a;
         setOtherUserId(otherId);
@@ -55,6 +56,7 @@ export default function Chat() {
         'get_conversation_origin' as any,
         { p_conv_id: conversationId }
       );
+      if (originErr) console.warn('[chat] load origin error:', JSON.stringify(originErr));
       if (!originErr && originRow) {
         const r = Array.isArray(originRow) ? originRow[0] : originRow;
         if (r) {
@@ -69,12 +71,14 @@ export default function Chat() {
       }
 
       // 拉历史消息
-      const { data: msgs } = await supabase
+      const { data: msgs, error: msgErr } = await supabase
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
-      if (msgs) setMessages(msgs as MessageRow[]);
+      if (msgErr) console.warn('[chat] load messages error:', JSON.stringify(msgErr));
+      else if (msgs) setMessages(msgs as MessageRow[]);
+      else console.warn('[chat] load messages returned null (possible RLS block)');
 
       // 标记已读（多次调用：进入页面立即标 + 退出页面再标一次保险）
       const markRead = async () => {
