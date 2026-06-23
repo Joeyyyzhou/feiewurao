@@ -30,11 +30,28 @@ export default function Chat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isNarrow = useIsNarrow();
 
-  // 加载消息 + 找到对方 + 拿对话起源 bottle + 订阅 Realtime + 标已读
+  // 进入聊天时立即标已读（不依赖 async 加载，确保在最前面执行）
+  useEffect(() => {
+    if (!conversationId || !profile) return;
+    supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId })
+      .then(({ error }: any) => { if (error) console.warn('[chat] mark_read mount error:', error.message); })
+      .catch((e: any) => console.warn('[chat] mark_read mount exception:', e));
+  }, [conversationId, profile]);
+
+  // 离开聊天时再标一次（保险）
+  useEffect(() => {
+    if (!conversationId || !profile) return;
+    return () => {
+      supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId })
+        .then(({ error }: any) => { if (error) console.warn('[chat] mark_read unmount error:', (error as any)?.message); })
+        .catch((e: any) => console.warn('[chat] mark_read unmount exception:', e));
+    };
+  }, [conversationId, profile]);
+
+  // 加载消息 + 找到对方 + 拿对话起源 bottle + 订阅 Realtime
   useEffect(() => {
     if (!conversationId || !profile) return;
 
-    let unsub: (() => void) | null = null;
     (async () => {
       // 找出对方
       const { data: conv, error: convErr } = await supabase
@@ -80,16 +97,6 @@ export default function Chat() {
       else if (msgs) setMessages(msgs as MessageRow[]);
       else console.warn('[chat] load messages returned null (possible RLS block)');
 
-      // 标记已读（多次调用：进入页面立即标 + 退出页面再标一次保险）
-      const markRead = async () => {
-        try {
-          const { error } = await supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId });
-          if (error) console.warn('[chat] mark_conversation_read failed:', error.message);
-        } catch (e) {
-          console.warn('[chat] mark_conversation_read exception:', e);
-        }
-      };
-      markRead();
 
       // 订阅 Realtime
       const channel = supabase
@@ -102,20 +109,15 @@ export default function Chat() {
               if (prev.find(m => m.id === (payload.new as any).id)) return prev;
               return [...prev, payload.new as MessageRow];
             });
-            // 收到对方新消息也顺手标已读
+            // 收到对方新消息时顺手标已读（确保红点及时消失）
             if (payload.new?.sender_id !== profile.id) {
-              markRead();
+              supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId }).catch(() => {});
             }
           },
         )
         .subscribe();
-      unsub = () => {
-        supabase.removeChannel(channel);
-        // 离开聊天前再标一次（保险），保证 last_read 时间戳是离开瞬间
-        markRead();
-      };
+      return () => { supabase.removeChannel(channel); };
     })();
-    return () => { if (unsub) unsub(); };
   }, [conversationId, profile]);
 
   useEffect(() => {

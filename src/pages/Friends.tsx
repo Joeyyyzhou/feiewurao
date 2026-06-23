@@ -80,13 +80,19 @@ export default function Friends() {
     if (!profile) return;
     setReady(true);
     cancelledRef.current = false;
-    load();
+
+    // 从 Chat 返回时（loc.key 变化），等 RPC commit 再刷新，避免红点不消失
+    const delay = loc.key ? 300 : 0;
+    const timer = setTimeout(() => {
+      if (!cancelledRef.current) load();
+    }, delay);
 
     const onVisible = () => { if (!document.hidden) load(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', load);
 
     return () => {
+      clearTimeout(timer);
       cancelledRef.current = true;
       setLoading(false); // cleanup: ensure loading not stuck
       document.removeEventListener('visibilitychange', onVisible);
