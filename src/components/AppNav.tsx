@@ -14,6 +14,7 @@ export default function AppNav() {
   const [countdown, setCountdown] = useState({ h: '--', m: '--' });
   const [unread, setUnread] = useState(0);
   const profileIdRef = useRef<string | null>(null);
+  const prevPathRef = useRef<string>('');
   profileIdRef.current = profile?.id ?? null;
 
   useEffect(() => {
@@ -41,12 +42,19 @@ export default function AppNav() {
   // 拉总未读数（瓶友 tab 红点）：轮询 + 路由变化 + 焦点返回
   useEffect(() => {
     if (!profile) { setUnread(0); return; }
-    fetchUnread();
+
+    // 从 /chat 页面返回时，延迟 600ms 再拉取（等 mark_conversation_read RPC commit）
+    const fromChat = prevPathRef.current.startsWith('/chat');
+    const delay = fromChat ? 600 : 0;
+    prevPathRef.current = path;
+
+    const timer = setTimeout(() => { if (profileIdRef.current) fetchUnread(); }, delay);
     const id = setInterval(fetchUnread, 30000);
     const onVisible = () => { if (!document.hidden) fetchUnread(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', fetchUnread);
     return () => {
+      clearTimeout(timer);
       clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', fetchUnread);

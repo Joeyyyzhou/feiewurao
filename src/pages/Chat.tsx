@@ -34,8 +34,14 @@ export default function Chat() {
   useEffect(() => {
     if (!conversationId || !profile) return;
     supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId })
-      .then(({ error }: any) => { if (error) console.warn('[chat] mark_read mount error:', error.message); })
-      .catch((e: any) => console.warn('[chat] mark_read mount exception:', e));
+      .then(({ error }: any) => {
+        if (error) {
+          console.error('[chat] mark_read mount FAILED:', error.message, error.code, error.hint);
+        } else {
+          console.log('[chat] mark_read mount OK for conv', conversationId);
+        }
+      })
+      .catch((e: any) => console.error('[chat] mark_read mount exception:', e?.message ?? e));
   }, [conversationId, profile]);
 
   // 离开聊天时再标一次（保险）
@@ -43,8 +49,14 @@ export default function Chat() {
     if (!conversationId || !profile) return;
     return () => {
       supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId })
-        .then(({ error }: any) => { if (error) console.warn('[chat] mark_read unmount error:', (error as any)?.message); })
-        .catch((e: any) => console.warn('[chat] mark_read unmount exception:', e));
+        .then(({ error }: any) => {
+          if (error) {
+            console.error('[chat] mark_read unmount FAILED:', (error as any)?.message);
+          } else {
+            console.log('[chat] mark_read unmount OK for conv', conversationId);
+          }
+        })
+        .catch((e: any) => console.error('[chat] mark_read unmount exception:', e?.message ?? e));
     };
   }, [conversationId, profile]);
 

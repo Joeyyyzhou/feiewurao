@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AppNav from '../components/AppNav';
 import Avatar from '../components/Avatar';
 import { supabase } from '../lib/supabase';
@@ -20,6 +20,7 @@ interface FriendItem {
 export default function Friends() {
   const { profile } = useAuth();
   const loc = useLocation();
+  const nav = useNavigate();
   const [friends, setFriends] = useState<FriendItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
@@ -27,6 +28,18 @@ export default function Friends() {
   const cancelledRef = useRef(false);
   const profileIdRef = useRef<string | null>(null);
   profileIdRef.current = profile?.id ?? null;
+
+  // 点击对话时：先标已读（同步等待 RPC 完成），再导航
+  // 这样确保离开 Friends 页前 DB 已更新，返回时红点一定消失
+  const handleOpenChat = useCallback(async (convId: string, ended: boolean) => {
+    if (!profile) return;
+    try {
+      await supabase.rpc('mark_conversation_read' as any, { p_conv_id: convId });
+    } catch (e) {
+      console.warn('[friends] mark_read before nav error:', e);
+    }
+    nav(`/chat/${convId}${ended ? '?ended=1' : ''}`);
+  }, [profile, nav]);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -164,9 +177,9 @@ export default function Friends() {
         {ready && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {friends.map(f => (
-            <Link
+            <a
               key={f.conversationId}
-              to={`/chat/${f.conversationId}${f.ended ? '?ended=1' : ''}`}
+              onClick={() => handleOpenChat(f.conversationId, f.ended)}
               className="tap-card"
               style={{
                 display: 'flex', alignItems: 'center', gap: isNarrow ? 12 : 20,
@@ -229,7 +242,7 @@ export default function Friends() {
                 </div>
               </div>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: isNarrow ? 11 : 13, color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>{f.time}</div>
-            </Link>
+            </a>
           ))}
         </div>
         )}
