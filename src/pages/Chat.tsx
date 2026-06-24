@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
-import BgVideo from '../components/BgVideo';
 import { supabase, invokeWithTimeout } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useToast } from '../components/Toast';
@@ -235,7 +234,6 @@ export default function Chat() {
 
   return (
     <>
-      <BgVideo />
       <div style={{ ...immersiveBar, padding: isNarrow ? '20px 16px 14px' : '32px 56px 24px' }}>
         <Link to="/friends" style={backStyle}>← 瓶友</Link>
         <div style={{

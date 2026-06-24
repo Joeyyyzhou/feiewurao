@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import BgVideo from '../components/BgVideo';
 import { supabase, invokeWithTimeout } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useToast } from '../components/Toast';
@@ -145,7 +144,6 @@ export default function Pick() {
 
   return (
     <>
-      <BgVideo />
       <div style={{ ...immersiveBar, padding: isNarrow ? '20px 18px 14px' : '32px 56px 24px' }}>
         <Link to="/" style={backStyle}>← 回到海面</Link>
       </div>

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import BgVideo from '../components/BgVideo';
 import AboutDrawer from '../components/AboutDrawer';
 
 type Mode = 'register' | 'login';
@@ -76,7 +75,6 @@ export default function Register() {
 
   return (
     <>
-      <BgVideo />
       <main style={{ position: 'relative', zIndex: 1, minHeight: '100vh', padding: 'clamp(70px, 14vw, 110px) clamp(18px, 5vw, 32px) 60px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <div style={{ textAlign: 'center', marginBottom: 'clamp(32px, 7vw, 56px)', color: '#fff', textShadow: '0 2px 20px rgba(0,0,0,0.5)' }}>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 13, color: 'rgba(255,255,255,0.6)', letterSpacing: 5, marginBottom: 14 }}>welcome aboard</div>

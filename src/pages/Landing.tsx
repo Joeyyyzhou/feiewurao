@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import BgVideo from '../components/BgVideo';
 import AboutDrawer from '../components/AboutDrawer';
 import { useIsNarrow } from '../lib/useIsNarrow';
 
@@ -9,8 +8,6 @@ export default function Landing() {
 
   return (
     <>
-      <BgVideo />
-
       <main style={{
         position: 'relative', zIndex: 1, minHeight: '100vh',
         padding: isNarrow ? '76px 24px 60px' : '120px 56px 80px',

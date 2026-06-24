@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import BgVideo from '../components/BgVideo';
 import { useIsNarrow } from '../lib/useIsNarrow';
 
 type Stage = 'request' | 'verify' | 'done';
@@ -59,7 +58,6 @@ export default function ForgotPassword() {
 
   return (
     <>
-      <BgVideo />
       <main style={{
         position: 'relative', zIndex: 1, minHeight: '100vh',
         padding: 'clamp(70px, 14vw, 110px) clamp(18px, 5vw, 32px) 60px',
