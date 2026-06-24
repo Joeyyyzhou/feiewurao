@@ -41,6 +41,18 @@ export default function Friends() {
     nav(`/chat/${convId}${ended ? '?ended=1' : ''}`);
   }, [profile, nav]);
 
+  // 进入瓶友页时：批量标所有对话为已读（清除导航红点）
+  const markAllRead = useCallback(async () => {
+    if (!profile) return;
+    const { data, error } = await supabase.rpc('list_my_conversations' as any);
+    if (!data || error) return;
+    await Promise.all(
+      (data as any[]).map((r: any) =>
+        supabase.rpc('mark_conversation_read' as any, { p_conv_id: r.conversation_id }).catch(() => {})
+      )
+    );
+  }, [profile]);
+
   const load = useCallback(async () => {
     if (!profile) return;
     cancelledRef.current = false;
