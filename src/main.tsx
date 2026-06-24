@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { lazy } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
@@ -7,17 +7,30 @@ import RequireAuth from './components/RequireAuth';
 import BgVideo from './components/BgVideo';
 import './index.css';
 
-// 路由级 code splitting：每个 tab 独立 chunk
-const Landing       = React.lazy(() => import('./pages/Landing'));
-const Register      = React.lazy(() => import('./pages/Register'));
-const ApplyInvite  = React.lazy(() => import('./pages/ApplyInvite'));
-const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
-const Sea           = React.lazy(() => import('./pages/Sea'));
-const Friends       = React.lazy(() => import('./pages/Friends'));
-const Me            = React.lazy(() => import('./pages/Me'));
-const Throw         = React.lazy(() => import('./pages/Throw'));
-const Pick          = React.lazy(() => import('./pages/Pick'));
-const Chat          = React.lazy(() => import('./pages/Chat'));
+// 主 tab 直接导入：海 / 瓶友 / 我 —— 用户必切，去掉 lazy 避免全屏 spinner
+import Sea           from './pages/Sea';
+import Friends       from './pages/Friends';
+import Me            from './pages/Me';
+
+// 次要页面保留 code splitting
+const Landing        = lazy(() => import('./pages/Landing'));
+const Register       = lazy(() => import('./pages/Register'));
+const ApplyInvite   = lazy(() => import('./pages/ApplyInvite'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const Throw          = lazy(() => import('./pages/Throw'));
+const Pick           = lazy(() => import('./pages/Pick'));
+const Chat           = lazy(() => import('./pages/Chat'));
+
+// 预加载次要页面的 chunk（空闲时触发）
+function prefetchChunks() {
+  void import('./pages/Landing');
+  void import('./pages/Register');
+  void import('./pages/ApplyInvite');
+  void import('./pages/ForgotPassword');
+  void import('./pages/Throw');
+  void import('./pages/Pick');
+  void import('./pages/Chat');
+}
 
 // 首页智能路由：未登录显示 Landing，已登录显示 Sea
 function HomeRoute() {
@@ -28,12 +41,18 @@ function HomeRoute() {
 }
 
 function App() {
+  // 页面稳定后预加载其余 chunk
+  React.useEffect(() => {
+    const id = requestIdleCallback ? requestIdleCallback(prefetchChunks) : setTimeout(prefetchChunks, 2000);
+    return () => { cancelIdleCallback?.(id); clearTimeout(id); };
+  }, []);
+
   return (
     <>
       {/* 背景视频：单例，永远不卸载 */}
       <BgVideo />
 
-      {/* 路由内容（带 code splitting） */}
+      {/* 路由内容 */}
       <Suspense fallback={<PageSpinner />}>
         <Routes>
           <Route path="/" element={<HomeRoute />} />
@@ -53,7 +72,7 @@ function App() {
   );
 }
 
-// 轻量 CSS 加载 spinner（不重新加载视频）
+// 轻量 CSS 加载 spinner（仅用于次要页面首次加载）
 function PageSpinner() {
   return (
     <div style={{
