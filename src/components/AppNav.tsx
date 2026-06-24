@@ -39,6 +39,22 @@ export default function AppNav() {
     if (!error) setUnread(Number(data) || 0);
   }, []);
 
+  // 页面首次加载时：把所有对话标为已读（"进入=已看"语义，刷新后红点不再出现）
+  useEffect(() => {
+    if (!profile) return;
+    const markAllRead = async () => {
+      const { data, error } = await supabase.rpc('list_my_conversations' as any);
+      if (!data || error) return;
+      await Promise.all(
+        (data as any[]).map((r: any) =>
+          supabase.rpc('mark_conversation_read' as any, { p_conv_id: r.conversation_id }).catch(() => {})
+        )
+      );
+      setUnread(0);
+    };
+    markAllRead();
+  }, [profile]);
+
   // 拉总未读数（瓶友 tab 红点）：轮询 + 路由变化 + 焦点返回
   useEffect(() => {
     if (!profile) { setUnread(0); return; }
