@@ -100,15 +100,6 @@ export default function Friends() {
     }
   }, [profile]);
 
-  // 进入瓶友 tab 时：立即把所有 conv 标为已读（"进入 = 已看"语义）
-  const markAllRead = useCallback(async () => {
-    if (!profile) return;
-    const { data, error } = await supabase.rpc('list_my_conversations' as any);
-    if (!data || error) return;
-    const ids = (data as any[]).map((r: any) => r.conversation_id);
-    await Promise.all(ids.map(id => supabase.rpc('mark_conversation_read' as any, { p_conv_id: id }).catch(() => {})));
-  }, [profile]);
-
   // 初始加载 + 路由返回时刷新
   useEffect(() => {
     if (!profile) return;

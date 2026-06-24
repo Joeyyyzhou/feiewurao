@@ -1,4 +1,4 @@
-import React, { lazy } from 'react';
+import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
@@ -11,7 +11,6 @@ import './index.css';
 import Sea           from './pages/Sea';
 import Friends       from './pages/Friends';
 import Me            from './pages/Me';
-import BottleDetail  from './pages/BottleDetail';
 
 // 次要页面保留 code splitting
 const Landing        = lazy(() => import('./pages/Landing'));
