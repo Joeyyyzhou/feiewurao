@@ -1,5 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useCallback } from 'react';
 import AppNav from '../components/AppNav';
 import AboutDrawer from '../components/AboutDrawer';
 import OceanWeather from '../components/OceanWeather';
@@ -8,13 +8,26 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useIsNarrow } from '../lib/useIsNarrow';
 
+interface MyBottle {
+  id: string;
+  bottle_no: number;
+  mood: string;
+  content: string;
+  status: string;
+  created_at: string;
+  has_conversation: boolean;
+}
+
 export default function Sea() {
   const { profile } = useAuth();
   const loc = useLocation();
+  const navigate = useNavigate();
   const fromReply = loc.search.includes('fromReply');
   const [thrown, setThrown] = useState(0);
   const [picked, setPicked] = useState(0);
   const [toastShow, setToastShow] = useState(fromReply);
+  const [myBottles, setMyBottles] = useState<MyBottle[]>([]);
+  const [bottlesLoading, setBottlesLoading] = useState(false);
   const isNarrow = useIsNarrow();
 
   useEffect(() => {
@@ -24,47 +37,91 @@ export default function Sea() {
     }
   }, [fromReply]);
 
+  const fetchQuota = useCallback(() => {
+    if (!profile) return;
+    const today = new Date().toISOString().slice(0, 10);
+    supabase
+      .from('quotas')
+      .select('thrown, picked')
+      .eq('user_id', profile.id)
+      .eq('date', today)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        if (data) {
+          setThrown(data.thrown);
+          setPicked(data.picked);
+        } else {
+          setThrown(0);
+          setPicked(0);
+        }
+      });
+  }, [profile]);
+
+  const fetchMyBottles = useCallback(async () => {
+    if (!profile) return;
+    setBottlesLoading(true);
+    const { data, error } = await supabase
+      .from('bottles')
+      .select('id, bottle_no, mood, content, status, created_at')
+      .eq('thrower_id', profile.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (!error && data) {
+      const bottles = data as any[];
+      const withConv = await Promise.all(
+        bottles.map(async (b) => {
+          const { count } = await supabase
+            .from('conversations')
+            .select('*', { count: 'exact', head: true })
+            .eq('bottle_id', b.id);
+          return { ...b, has_conversation: (count || 0) > 0 };
+        })
+      );
+      setMyBottles(withConv);
+    }
+    setBottlesLoading(false);
+  }, [profile]);
+
   useEffect(() => {
     if (!profile) return;
     let cancelled = false;
-    const today = new Date().toISOString().slice(0, 10);
 
-    const fetchQuota = () => {
-      supabase
-        .from('quotas')
-        .select('thrown, picked')
-        .eq('user_id', profile.id)
-        .eq('date', today)
-        .maybeSingle()
-        .then(({ data }: any) => {
-          if (cancelled) return;
-          if (data) {
-            setThrown(data.thrown);
-            setPicked(data.picked);
-          } else {
-            // 当天还没生成 quota 行，归零
-            setThrown(0);
-            setPicked(0);
-          }
-        });
+    const doFetch = () => {
+      fetchQuota();
+      fetchMyBottles();
     };
 
-    // 初次加载
-    fetchQuota();
+    doFetch();
 
-    // 1) 路由变化（带 ?refresh=throw/toss/fromReply 回来）→ 重拉
-    //    loc 已在依赖里
-    // 2) 标签页重新可见 → 重拉（防止后台久了数据陈旧）
-    const onVisible = () => { if (!document.hidden) fetchQuota(); };
+    const onVisible = () => { if (!document.hidden) doFetch(); };
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', fetchQuota);
+    window.addEventListener('focus', doFetch);
 
     return () => {
       cancelled = true;
       document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', fetchQuota);
+      window.removeEventListener('focus', doFetch);
     };
-  }, [profile, loc.search, loc.key]);
+  }, [profile, loc.search, loc.key, fetchQuota, fetchMyBottles]);
+
+  const moodLabel: Record<string, string> = {
+    happy: '开心', sad: '难过', angry: '生气',
+    anxious: '焦虑', excited: '兴奋', tired: '疲惫',
+    calm: '平静', lonely: '孤独', grateful: '感恩',
+    confused: '困惑', hopeful: '希望',
+  };
+
+  const formatTime = (ts: string) => {
+    const d = new Date(ts);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffH = Math.floor(diffMs / 3600000);
+    if (diffH < 1) return '刚刚';
+    if (diffH < 24) return `${diffH}h前`;
+    const diffD = Math.floor(diffH / 24);
+    if (diffD < 7) return `${diffD}天前`;
+    return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+  };
 
   return (
     <>
@@ -85,11 +142,12 @@ export default function Sea() {
         </div>
       )}
 
-      <main style={{ position: 'relative', zIndex: 1, height: '100vh' }}>
+      <main style={{ position: 'relative', zIndex: 1, minHeight: '100vh', paddingBottom: 40 }}>
         <OceanWeather narrow={isNarrow} />
+
+        {/* 标题区 */}
         <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0,
-          padding: isNarrow ? '110px 24px 0' : '160px 56px 0',
+          padding: isNarrow ? '100px 24px 0' : '140px 56px 0',
           textAlign: 'center', color: '#fff',
         }}>
           <div style={{
@@ -97,7 +155,7 @@ export default function Sea() {
             fontSize: isNarrow ? 11 : 14,
             color: 'rgba(255,255,255,0.75)',
             letterSpacing: isNarrow ? 3 : 6,
-            marginBottom: isNarrow ? 16 : 22,
+            marginBottom: isNarrow ? 14 : 20,
             textTransform: 'lowercase',
             textShadow: '0 1px 12px rgba(0,0,0,0.5)',
           }}>
@@ -120,17 +178,16 @@ export default function Sea() {
           </h1>
         </div>
 
+        {/* 按钮区 */}
         <div style={{
-          position: 'absolute', left: '50%',
-          bottom: isNarrow ? '12%' : '18%',
-          transform: 'translateX(-50%)',
           display: 'flex',
           gap: isNarrow ? 10 : 18,
+          justifyContent: 'center',
           flexWrap: 'nowrap',
           whiteSpace: 'nowrap',
+          padding: isNarrow ? '32px 24px 0' : '48px 56px 0',
         }}>
           {thrown >= 3 && picked >= 3 ? (
-            /* 扔和捞都用完了 → 只显示一个瓶友按钮 */
             <Link to="/friends" className="btn btn-primary">
               看看你的瓶友
             </Link>
@@ -159,6 +216,114 @@ export default function Sea() {
             </>
           )}
         </div>
+
+        {/* 我的瓶子列表 */}
+        {myBottles.length > 0 && (
+          <div style={{
+            padding: isNarrow ? '28px 20px 0' : '40px 56px 0',
+            maxWidth: 520,
+            margin: '0 auto',
+          }}>
+            <div style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: isNarrow ? 11 : 13,
+              color: 'rgba(255,255,255,0.55)',
+              letterSpacing: isNarrow ? 3 : 5,
+              textTransform: 'uppercase',
+              marginBottom: isNarrow ? 12 : 16,
+              textAlign: 'center',
+            }}>
+              我的瓶子
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {myBottles.map(b => {
+                const isActive = b.status === 'active';
+                const isReplied = b.has_conversation;
+                const statusLabel = isActive ? '漂流中' : isReplied ? '已回信' : '已沉底';
+                const statusColor = isActive
+                  ? 'rgba(74,194,255,0.85)'
+                  : isReplied
+                  ? 'rgba(255,184,77,0.85)'
+                  : 'rgba(255,255,255,0.4)';
+                return (
+                  <div
+                    key={b.id}
+                    onClick={() => navigate(`/bottle/${b.id}`)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '12px 16px',
+                      background: 'rgba(255,255,255,0.06)',
+                      backdropFilter: 'blur(24px)',
+                      borderRadius: 14,
+                      border: '0.5px solid rgba(255,255,255,0.12)',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                  >
+                    {/* 状态圆点 */}
+                    <div style={{
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: statusColor,
+                      flexShrink: 0,
+                    }} />
+                    {/* 瓶子编号 + 心情 */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: isNarrow ? 12 : 13,
+                        color: 'rgba(255,255,255,0.9)',
+                        fontFamily: "'Cormorant Garamond', serif",
+                        fontWeight: 500,
+                        marginBottom: 2,
+                      }}>
+                        No.{b.bottle_no} · {moodLabel[b.mood] || b.mood}
+                      </div>
+                      {/* 内容预览 */}
+                      <div style={{
+                        fontSize: isNarrow ? 11 : 12,
+                        color: 'rgba(255,255,255,0.5)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}>
+                        {b.content.slice(0, 40)}
+                      </div>
+                    </div>
+                    {/* 状态 + 时间 */}
+                    <div style={{
+                      fontSize: isNarrow ? 10 : 11,
+                      color: statusColor,
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontStyle: 'italic',
+                      flexShrink: 0,
+                      textAlign: 'right',
+                      lineHeight: 1.4,
+                    }}>
+                      <div>{statusLabel}</div>
+                      <div style={{ opacity: 0.7 }}>{formatTime(b.created_at)}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 空状态提示：有扔过瓶子但没有数据显示时 */}
+        {!bottlesLoading && myBottles.length === 0 && (
+          <div style={{
+            textAlign: 'center',
+            padding: isNarrow ? '40px 24px 0' : '60px 56px 0',
+            color: 'rgba(255,255,255,0.3)',
+            fontSize: isNarrow ? 12 : 13,
+            letterSpacing: 2,
+          }}>
+            你扔的瓶子会出现在这里
+          </div>
+        )}
       </main>
 
       <AboutDrawer />

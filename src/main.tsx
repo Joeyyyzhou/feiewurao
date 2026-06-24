@@ -11,6 +11,7 @@ import './index.css';
 import Sea           from './pages/Sea';
 import Friends       from './pages/Friends';
 import Me            from './pages/Me';
+import BottleDetail  from './pages/BottleDetail';
 
 // 次要页面保留 code splitting
 const Landing        = lazy(() => import('./pages/Landing'));
@@ -20,6 +21,7 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const Throw          = lazy(() => import('./pages/Throw'));
 const Pick           = lazy(() => import('./pages/Pick'));
 const Chat           = lazy(() => import('./pages/Chat'));
+const BottleDetail   = lazy(() => import('./pages/BottleDetail'));
 
 // 预加载次要页面的 chunk（空闲时触发）
 function prefetchChunks() {
@@ -30,6 +32,7 @@ function prefetchChunks() {
   void import('./pages/Throw');
   void import('./pages/Pick');
   void import('./pages/Chat');
+  void import('./pages/BottleDetail');
 }
 
 // 首页智能路由：未登录显示 Landing，已登录显示 Sea
@@ -65,6 +68,7 @@ function App() {
           <Route path="throw" element={<RequireAuth><Throw /></RequireAuth>} />
           <Route path="pick" element={<RequireAuth><Pick /></RequireAuth>} />
           <Route path="chat/:conversationId" element={<RequireAuth><Chat /></RequireAuth>} />
+          <Route path="bottle/:id" element={<RequireAuth><BottleDetail /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
