@@ -88,6 +88,15 @@ export default function Friends() {
     }
   }, [profile]);
 
+  // 进入瓶友 tab 时：立即把所有 conv 标为已读（"进入 = 已看"语义）
+  const markAllRead = useCallback(async () => {
+    if (!profile) return;
+    const { data, error } = await supabase.rpc('list_my_conversations' as any);
+    if (!data || error) return;
+    const ids = (data as any[]).map((r: any) => r.conversation_id);
+    await Promise.all(ids.map(id => supabase.rpc('mark_conversation_read' as any, { p_conv_id: id }).catch(() => {})));
+  }, [profile]);
+
   // 初始加载 + 路由返回时刷新
   useEffect(() => {
     if (!profile) return;
@@ -96,8 +105,12 @@ export default function Friends() {
 
     // 从 Chat 返回时（loc.key 变化），等 RPC commit 再刷新，避免红点不消失
     const delay = loc.key ? 300 : 0;
-    const timer = setTimeout(() => {
-      if (!cancelledRef.current) load();
+    const timer = setTimeout(async () => {
+      if (!cancelledRef.current) {
+        // 进入瓶友 tab：先批量标已读，再拉列表
+        await markAllRead();
+        load();
+      }
     }, delay);
 
     const onVisible = () => { if (!document.hidden) load(); };
@@ -111,7 +124,7 @@ export default function Friends() {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', load);
     };
-  }, [profile, loc.key, load]);
+  }, [profile, loc.key, load, markAllRead]);
 
   // Realtime 订阅：新消息到达时实时刷新红点
   useEffect(() => {
