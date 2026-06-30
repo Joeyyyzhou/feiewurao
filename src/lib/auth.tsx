@@ -8,8 +8,10 @@ interface AuthContextType {
   user: User | null;
   profile: UserRow | null;
   loading: boolean;
+  banError: string | null;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  clearBanError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -18,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserRow | null>(null);
   const [loading, setLoading] = useState(true);
+  const [banError, setBanError] = useState<string | null>(null);
 
   async function loadProfile(userId: string): Promise<UserRow | null> {
     // 双路径：优先用 SELECT（最简单、RLS 允许查自己）；如果 SELECT 拿不到再用 RPC 尝试建/取 profile
@@ -35,6 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         3000
       );
       if (!res.error && res.data) {
+        // 检查是否被封禁
+        if (res.data.banned_at) {
+          setBanError('banned');
+          await supabase.auth.signOut();
+          return null;
+        }
         return res.data as UserRow;
       }
       if (res.error) {
@@ -109,6 +118,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setSession(null);
     setProfile(null);
+    setBanError(null);
+  }
+
+  function clearBanError() {
+    setBanError(null);
   }
 
   return (
@@ -118,8 +132,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: session?.user ?? null,
         profile,
         loading,
+        banError,
         signOut,
         refreshProfile,
+        clearBanError,
       }}
     >
       {children}

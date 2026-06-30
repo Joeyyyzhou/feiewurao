@@ -7,8 +7,8 @@ import AboutDrawer from '../components/AboutDrawer';
 type Mode = 'register' | 'login';
 
 export default function Register() {
+  const { session, loading, banError, clearBanError } = useAuth();
   const nav = useNavigate();
-  const { session, loading } = useAuth();
   const [mode, setMode] = useState<Mode>('register');
   const [inviteCode, setInviteCode] = useState('');
   const [email, setEmail] = useState('');
@@ -94,8 +94,8 @@ export default function Register() {
         }}>
           {/* 模式切换 */}
           <div style={{ display: 'flex', gap: 0, marginBottom: 28, borderBottom: '0.5px solid rgba(255,255,255,0.18)' }}>
-            <ModeTab active={mode === 'register'} onClick={() => { setMode('register'); setErr(null); }}>新人注册</ModeTab>
-            <ModeTab active={mode === 'login'} onClick={() => { setMode('login'); setErr(null); }}>老用户登录</ModeTab>
+            <ModeTab active={mode === 'register'} onClick={() => { setMode('register'); setErr(null); clearBanError(); }}>新人注册</ModeTab>
+            <ModeTab active={mode === 'login'} onClick={() => { setMode('login'); setErr(null); clearBanError(); }}>老用户登录</ModeTab>
           </div>
 
           {mode === 'register' && (
@@ -103,7 +103,7 @@ export default function Register() {
               <input
                 type="text"
                 value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+                onChange={(e) => { setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)); clearBanError(); }}
                 placeholder="问已在用的鹅厂同事要 6 位码"
                 style={{ ...inputStyle, letterSpacing: 6, textAlign: 'center', fontSize: 17 }}
                 maxLength={6}
@@ -112,14 +112,20 @@ export default function Register() {
           )}
 
           <FormRow label="企业邮箱">
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="yourname@tencent.com" style={inputStyle} />
+            <input
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); clearBanError(); }}
+                placeholder="yourname@tencent.com"
+                style={inputStyle}
+              />
           </FormRow>
 
           <FormRow label="密码">
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); clearBanError(); }}
               onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
               placeholder="至少 6 位"
               style={inputStyle}
@@ -130,7 +136,11 @@ export default function Register() {
             {mode === 'register' ? '注册不发邮件，立即进站' : '使用注册时的邮箱+密码登录'}
           </div>
 
-          {err && <div style={{ color: 'rgba(255,180,180,0.95)', fontSize: 13, marginTop: 4, marginBottom: 10 }}>⚠ {err}</div>}
+          {(err || banError) && (
+            <div style={{ color: 'rgba(255,180,180,0.95)', fontSize: 13, marginTop: 4, marginBottom: 10 }}>
+              {err || (banError === 'banned' ? '⚠ 该账号已被封禁，如有疑问请联系管理员。' : '')}
+            </div>
+          )}
 
           <button
             className="btn btn-primary"
