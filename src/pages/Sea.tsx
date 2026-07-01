@@ -145,14 +145,13 @@ export default function Sea() {
       <main style={{
         position: 'relative', zIndex: 1, minHeight: '100vh', paddingBottom: 40,
         display: 'flex', flexDirection: 'column',
-        justifyContent: myBottles.length === 0 ? 'center' : 'flex-start',
       }}>
         <OceanWeather narrow={isNarrow} />
 
         {/* 标题区 */}
         <div style={{
           padding: myBottles.length === 0
-            ? (isNarrow ? '0 24px 0' : '0 56px 0')
+            ? (isNarrow ? '20vh 24px 0' : '22vh 56px 0')
             : (isNarrow ? '100px 24px 0' : '140px 56px 0'),
           textAlign: 'center', color: '#fff',
         }}>
@@ -191,7 +190,10 @@ export default function Sea() {
           justifyContent: 'center',
           flexWrap: 'nowrap',
           whiteSpace: 'nowrap',
-          padding: isNarrow ? '32px 24px 0' : '48px 56px 0',
+          marginTop: myBottles.length === 0 ? 'auto' : 0,
+          padding: myBottles.length === 0
+            ? (isNarrow ? '0 24px 8vh' : '0 56px 10vh')
+            : (isNarrow ? '32px 24px 0' : '48px 56px 0'),
         }}>
           {thrown >= 3 && picked >= 3 ? (
             <Link to="/friends" className="btn btn-primary">
