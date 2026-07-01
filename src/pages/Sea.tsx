@@ -142,12 +142,18 @@ export default function Sea() {
         </div>
       )}
 
-      <main style={{ position: 'relative', zIndex: 1, minHeight: '100vh', paddingBottom: 40 }}>
+      <main style={{
+        position: 'relative', zIndex: 1, minHeight: '100vh', paddingBottom: 40,
+        display: 'flex', flexDirection: 'column',
+        justifyContent: myBottles.length === 0 ? 'center' : 'flex-start',
+      }}>
         <OceanWeather narrow={isNarrow} />
 
         {/* 标题区 */}
         <div style={{
-          padding: isNarrow ? '100px 24px 0' : '140px 56px 0',
+          padding: myBottles.length === 0
+            ? (isNarrow ? '0 24px 0' : '0 56px 0')
+            : (isNarrow ? '100px 24px 0' : '140px 56px 0'),
           textAlign: 'center', color: '#fff',
         }}>
           <div style={{
@@ -312,18 +318,6 @@ export default function Sea() {
           </div>
         )}
 
-        {/* 空状态提示：有扔过瓶子但没有数据显示时 */}
-        {!bottlesLoading && myBottles.length === 0 && (
-          <div style={{
-            textAlign: 'center',
-            padding: isNarrow ? '40px 24px 0' : '60px 56px 0',
-            color: 'rgba(255,255,255,0.3)',
-            fontSize: isNarrow ? 12 : 13,
-            letterSpacing: 2,
-          }}>
-            你扔的瓶子会出现在这里
-          </div>
-        )}
       </main>
 
       <AboutDrawer />
