@@ -58,8 +58,14 @@ export default function Friends() {
     cancelledRef.current = false;
     setLoading(true);
 
+    // 超时兜底：5 秒内 RPC 没返回就停掉 loading，避免永远卡「加载中」
+    const safety = setTimeout(() => {
+      if (!cancelledRef.current) setLoading(false);
+    }, 5000);
+
     try {
       const { data, error } = await supabase.rpc('list_my_conversations' as any);
+      clearTimeout(safety);
       if (cancelledRef.current || !profileIdRef.current) { setLoading(false); return; }
 
       if (error || !data) {
@@ -108,11 +114,11 @@ export default function Friends() {
 
     // 从 Chat 返回时（loc.key 变化），等 RPC commit 再刷新，避免红点不消失
     const delay = loc.key ? 300 : 0;
-    const timer = setTimeout(async () => {
+    const timer = setTimeout(() => {
       if (!cancelledRef.current) {
-        // 进入瓶友 tab：先批量标已读，再拉列表
-        await markAllRead();
+        // 先拉列表（不被标已读阻塞），标已读在后台跑
         load();
+        void markAllRead();
       }
     }, delay);
 

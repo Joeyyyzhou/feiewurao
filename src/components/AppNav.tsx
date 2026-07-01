@@ -43,6 +43,13 @@ export default function AppNav() {
   useEffect(() => {
     if (!profile) { setUnread(0); return; }
 
+    // 进入瓶友 tab：立即乐观清零红点（"进入=已看"），不等 RPC
+    if (path === '/friends') {
+      setUnread(0);
+      prevPathRef.current = path;
+      return;
+    }
+
     // 从 /chat 页面返回时，延迟 600ms 再拉取（等 mark_conversation_read RPC commit）
     const fromChat = prevPathRef.current.startsWith('/chat');
     const delay = fromChat ? 600 : 0;
