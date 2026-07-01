@@ -7,3 +7,4 @@ dist/
 .vercel
 *.old
 .env.production
+supabase/.temp/
