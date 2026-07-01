@@ -41,16 +41,14 @@ export default function Friends() {
     nav(`/chat/${convId}${ended ? '?ended=1' : ''}`);
   }, [profile, nav]);
 
-  // 进入瓶友页时：批量标所有对话为已读（清除导航红点）
+  // 进入瓶友页时：单次批量标所有对话为已读（清除导航红点 + 列表红点）
   const markAllRead = useCallback(async () => {
     if (!profile) return;
-    const { data, error } = await supabase.rpc('list_my_conversations' as any);
-    if (!data || error) return;
-    await Promise.all(
-      (data as any[]).map((r: any) =>
-        supabase.rpc('mark_conversation_read' as any, { p_conv_id: r.conversation_id }).catch(() => {})
-      )
-    );
+    try {
+      await supabase.rpc('mark_all_conversations_read' as any);
+    } catch (e) {
+      console.warn('[friends] mark_all_read error:', e);
+    }
   }, [profile]);
 
   const load = useCallback(async () => {
@@ -114,12 +112,11 @@ export default function Friends() {
 
     // 从 Chat 返回时（loc.key 变化），等 RPC commit 再刷新，避免红点不消失
     const delay = loc.key ? 300 : 0;
-    const timer = setTimeout(() => {
-      if (!cancelledRef.current) {
-        // 先拉列表（不被标已读阻塞），标已读在后台跑
-        load();
-        void markAllRead();
-      }
+    const timer = setTimeout(async () => {
+      if (cancelledRef.current) return;
+      // 先单次批量标已读（快），提交后再拉列表 → 列表读到最新状态，红点可靠清零
+      await markAllRead();
+      if (!cancelledRef.current) load();
     }, delay);
 
     const onVisible = () => { if (!document.hidden) load(); };
