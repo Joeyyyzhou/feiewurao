@@ -20,6 +20,8 @@ export default function Chat() {
     try { return localStorage.getItem(`fewr.chat.draft.${conversationId}`) ?? ''; } catch { return ''; }
   });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const [otherNo, setOtherNo] = useState('----');
   const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const [origin, setOrigin] = useState<{
@@ -32,30 +34,14 @@ export default function Chat() {
   // 进入聊天时立即标已读（不依赖 async 加载，确保在最前面执行）
   useEffect(() => {
     if (!conversationId || !profile) return;
-    supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId })
-      .then(({ error }: any) => {
-        if (error) {
-          console.error('[chat] mark_read mount FAILED:', error.message, error.code, error.hint);
-        } else {
-          console.log('[chat] mark_read mount OK for conv', conversationId);
-        }
-      })
-      .catch((e: any) => console.error('[chat] mark_read mount exception:', e?.message ?? e));
+    supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId }).catch(() => {});
   }, [conversationId, profile]);
 
   // 离开聊天时再标一次（保险）
   useEffect(() => {
     if (!conversationId || !profile) return;
     return () => {
-      supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId })
-        .then(({ error }: any) => {
-          if (error) {
-            console.error('[chat] mark_read unmount FAILED:', (error as any)?.message);
-          } else {
-            console.log('[chat] mark_read unmount OK for conv', conversationId);
-          }
-        })
-        .catch((e: any) => console.error('[chat] mark_read unmount exception:', e?.message ?? e));
+      supabase.rpc('mark_conversation_read' as any, { p_conv_id: conversationId }).catch(() => {});
     };
   }, [conversationId, profile]);
 
@@ -231,6 +217,28 @@ export default function Chat() {
       toast.error('网络异常，请稍后重试');
     }
   }
+  async function reportChat(reason: string) {
+    if (!profile || reporting) return;
+    setReporting(true);
+    try {
+      const { error } = await supabase.from('reports').insert({
+        reporter: profile.id,
+        bottle_id: null,
+        message_id: null,
+        conversation_id: conversationId,
+        reason: reason as any,
+      });
+      if (error) { toast.error('举报失败：' + error.message); setReporting(false); return; }
+      setReportOpen(false);
+      setMenuOpen(false);
+      toast.success('举报已提交，我们会尽快处理');
+    } catch (e: any) {
+      toast.error('网络异常，请稍后重试');
+      setReporting(false);
+    } finally {
+      setReporting(false);
+    }
+  }
 
   return (
     <>
@@ -259,7 +267,46 @@ export default function Chat() {
           {!ended && <a onClick={endChat} style={menuItemStyle}>结束这段漂流</a>}
           <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.12)', margin: '4px 8px' }} />
           <a onClick={blockTA} style={{ ...menuItemStyle, color: 'rgba(220, 130, 130, 0.95)' }}>拉黑 TA</a>
-          <a style={{ ...menuItemStyle, color: 'rgba(220, 130, 130, 0.95)' }}>举报</a>
+          <a onClick={() => { setMenuOpen(false); setReportOpen(true); }} style={{ ...menuItemStyle, color: 'rgba(220, 130, 130, 0.95)' }}>举报</a>
+        </div>
+      )}
+
+      {/* 举报弹窗 */}
+      {reportOpen && (
+        <div onClick={() => setReportOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 220, background: 'rgba(0,5,15,0.55)', backdropFilter: 'blur(14px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            background: 'rgba(28,36,50,0.9)', backdropFilter: 'blur(40px) saturate(1.4)',
+            border: '0.5px solid rgba(255,255,255,0.22)', borderRadius: 16,
+            padding: '30px 32px', maxWidth: 400, width: '100%',
+            color: '#fff', boxShadow: '0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18)',
+          }}>
+            <div style={{ fontSize: 16, letterSpacing: 3, textAlign: 'center', marginBottom: 6 }}>举报 No.{otherNo}</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', textAlign: 'center', letterSpacing: 1.5, marginBottom: 18 }}>不会向对方透露举报人</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                ['harass', '骚扰、人身攻击'],
+                ['sensitive', '政治、违法、敏感内容'],
+                ['porn', '色情、低俗'],
+                ['spam', '广告、引流、冒名'],
+                ['leak', '泄露公司机密 / 同事隐私'],
+                ['other', '其它'],
+              ].map(([v, label]) => (
+                <button key={v} onClick={() => reportChat(v)} disabled={reporting} style={{
+                  textAlign: 'left', padding: '12px 16px',
+                  border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 10,
+                  background: 'rgba(255,255,255,0.04)', color: '#fff',
+                  fontSize: 13.5, letterSpacing: 1.5, cursor: reporting ? 'default' : 'pointer',
+                  opacity: reporting ? 0.5 : 1,
+                }}>{label}</button>
+              ))}
+            </div>
+            <button onClick={() => setReportOpen(false)} style={{
+              marginTop: 16, width: '100%',
+              background: 'transparent', border: '0.5px solid rgba(255,255,255,0.3)',
+              color: 'rgba(255,255,255,0.7)', padding: '10px', borderRadius: 999,
+              fontSize: 13, letterSpacing: 3, cursor: 'pointer',
+            }}>取消</button>
+          </div>
         </div>
       )}
 

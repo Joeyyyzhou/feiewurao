@@ -37,6 +37,7 @@ export default function Pick() {
   const [reportReason, setReportReason] = useState<string | null>(null);
 
   const [pickErr, setPickErr] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const isNarrow = useIsNarrow();
 
   useEffect(() => {
@@ -87,12 +88,14 @@ export default function Pick() {
   }, [bottle?.id, replyText, replyMood]);
 
   async function sendReply() {
-    if (!bottle || !replyText.trim()) return;
+    if (!bottle || !replyText.trim() || submitting) return;
+    setSubmitting(true);
     try {
       // 敏感词检查（带超时，超时/未部署直接放过）
       const { data: scan } = await invokeWithTimeout('sensitive-check', { content: replyText.trim() });
       if (scan?.sensitive) {
         toast.error('回信内容可能违反社区规则，请修改后再发送');
+        setSubmitting(false);
         return;
       }
       const { error } = await supabase.rpc('submit_reply' as any, {
@@ -102,6 +105,7 @@ export default function Pick() {
       });
       if (error) {
         toast.error('回信发送失败：' + error.message);
+        setSubmitting(false);
         return;
       }
       setOverlay('reply');
@@ -110,22 +114,26 @@ export default function Pick() {
       setTimeout(() => nav('/?fromReply=1'), 2200);
     } catch (e: any) {
       toast.error('网络异常，请稍后重试');
+      setSubmitting(false);
     }
   }
   async function tossBack() {
-    if (!bottle) return;
+    if (!bottle || submitting) return;
+    setSubmitting(true);
     try {
       const { error } = await supabase.rpc('toss_bottle' as any, { p_bottle_id: bottle.id });
-      if (error) { toast.error('放回失败：' + error.message); return; }
+      if (error) { toast.error('放回失败：' + error.message); setSubmitting(false); return; }
       try { localStorage.removeItem(replyDraftKey(bottle.id)); } catch {}
       setOverlay('toss');
       setTimeout(() => nav('/?refresh=toss'), 2200);
     } catch (e: any) {
       toast.error('网络异常，请稍后重试');
+      setSubmitting(false);
     }
   }
   async function submitReport() {
-    if (!bottle || !reportReason || !profile) return;
+    if (!bottle || !reportReason || !profile || submitting) return;
+    setSubmitting(true);
     try {
       const { error } = await supabase.from('reports').insert({
         reporter: profile.id,
@@ -133,12 +141,13 @@ export default function Pick() {
         message_id: null,
         reason: reportReason as any,
       });
-      if (error) { toast.error('举报失败：' + error.message); return; }
+      if (error) { toast.error('举报失败：' + error.message); setSubmitting(false); return; }
       setReportOpen(false);
       setOverlay('report');
       setTimeout(() => nav('/'), 2400);
     } catch (e: any) {
       toast.error('网络异常，请稍后重试');
+      setSubmitting(false);
     }
   }
 
@@ -173,7 +182,7 @@ export default function Pick() {
                 {!replyOpen ? (
                   <div style={{ paddingTop: 22, borderTop: '0.5px solid rgba(255,255,255,0.18)', display: 'flex', gap: isNarrow ? 8 : 12, flexWrap: isNarrow ? 'wrap' : 'nowrap' }}>
                     <button onClick={() => setReplyOpen(true)} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', minWidth: isNarrow ? '100%' : 'auto' }}>回信</button>
-                    <button onClick={tossBack} className="btn btn-ghost" style={{ padding: isNarrow ? '11px 18px' : '14px 22px', flex: isNarrow ? 1 : 'initial', justifyContent: 'center' }}>放回海里</button>
+                    <button onClick={tossBack} disabled={submitting} className="btn btn-ghost" style={{ padding: isNarrow ? '11px 18px' : '14px 22px', flex: isNarrow ? 1 : 'initial', justifyContent: 'center', opacity: submitting ? 0.5 : 1 }}>放回海里</button>
                     <button onClick={() => setReportOpen(true)} style={{
                       background: 'transparent', color: 'rgba(255,255,255,0.5)', fontSize: 13,
                       padding: isNarrow ? '11px 14px' : '14px 18px', borderRadius: 999, border: '0.5px solid rgba(255,255,255,0.22)',
@@ -221,7 +230,7 @@ export default function Pick() {
                           color: 'rgba(255,255,255,0.7)', padding: '10px 22px', borderRadius: 999,
                           fontSize: 13, letterSpacing: 3, cursor: 'pointer',
                         }}>取消</button>
-                        <button onClick={sendReply} disabled={!replyText.trim()} className="btn btn-primary" style={{ padding: '10px 28px', fontSize: 14 }}>送出回信</button>
+                        <button onClick={sendReply} disabled={!replyText.trim() || submitting} className="btn btn-primary" style={{ padding: '10px 28px', fontSize: 14, opacity: (!replyText.trim() || submitting) ? 0.5 : 1 }}>{submitting ? '送出中…' : '送出回信'}</button>
                       </div>
                     </div>
                   </div>
@@ -274,13 +283,13 @@ export default function Pick() {
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setReportOpen(false)} style={{ background: 'transparent', border: '0.5px solid rgba(255,255,255,0.3)', color: 'rgba(255,255,255,0.7)', padding: '9px 22px', borderRadius: 999, fontSize: 13, letterSpacing: 3, cursor: 'pointer' }}>取消</button>
-              <button onClick={submitReport} disabled={!reportReason} style={{
+              <button onClick={submitReport} disabled={!reportReason || submitting} style={{
                 background: 'rgba(200, 90, 90, 0.95)', border: '0.5px solid rgba(200, 90, 90, 0.95)',
                 color: '#fff', padding: '9px 22px', borderRadius: 999,
                 fontSize: 13, letterSpacing: 3, cursor: 'pointer',
                 fontFamily: '"Source Han Serif CN VF Medium", serif',
-                opacity: reportReason ? 1 : 0.35,
-              }}>提交举报</button>
+                opacity: (reportReason && !submitting) ? 1 : 0.35,
+              }}>{submitting ? '提交中…' : '提交举报'}</button>
             </div>
           </div>
         </div>

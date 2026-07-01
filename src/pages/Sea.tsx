@@ -10,7 +10,7 @@ import { useIsNarrow } from '../lib/useIsNarrow';
 
 interface MyBottle {
   id: string;
-  bottle_no: number;
+  owner_no: string;
   mood: string;
   content: string;
   status: string;
@@ -60,26 +60,16 @@ export default function Sea() {
   const fetchMyBottles = useCallback(async () => {
     if (!profile) return;
     setBottlesLoading(true);
-    const { data, error } = await supabase
-      .from('bottles')
-      .select('id, bottle_no, mood, content, status, created_at')
-      .eq('thrower_id', profile.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
-    if (!error && data) {
-      const bottles = data as any[];
-      const withConv = await Promise.all(
-        bottles.map(async (b) => {
-          const { count } = await supabase
-            .from('conversations')
-            .select('*', { count: 'exact', head: true })
-            .eq('bottle_id', b.id);
-          return { ...b, has_conversation: (count || 0) > 0 };
-        })
-      );
-      setMyBottles(withConv);
+    try {
+      const { data, error } = await supabase.rpc('list_my_bottles' as any);
+      if (!error && data) {
+        setMyBottles(data as MyBottle[]);
+      }
+    } catch (e) {
+      console.warn('[sea] list_my_bottles error:', e);
+    } finally {
+      setBottlesLoading(false);
     }
-    setBottlesLoading(false);
   }, [profile]);
 
   useEffect(() => {
@@ -287,7 +277,7 @@ export default function Sea() {
                         fontWeight: 500,
                         marginBottom: 2,
                       }}>
-                        No.{b.bottle_no} · {moodLabel[b.mood] || b.mood}
+                        No.{b.owner_no} · {moodLabel[b.mood] || b.mood}
                       </div>
                       {/* 内容预览 */}
                       <div style={{

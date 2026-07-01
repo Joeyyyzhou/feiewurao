@@ -8,10 +8,8 @@ import { useIsNarrow } from '../lib/useIsNarrow';
 interface BottleEvent {
   id: string;
   event_type: string;
-  actor_id: string;
+  actor_no?: string;
   created_at: string;
-  actor_no?: number;
-  actor_mood?: string;
 }
 
 export default function BottleDetail() {
@@ -21,40 +19,44 @@ export default function BottleDetail() {
   const [bottle, setBottle] = useState<any>(null);
   const [events, setEvents] = useState<BottleEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorKind, setErrorKind] = useState<'not_found' | 'not_owner' | 'load_failed' | null>(null);
 
   useEffect(() => {
     if (!id || !profile) return;
     let cancelled = false;
 
-    const fetchDetail = async () => {
-      // 瓶子基本信息
-      const { data: b } = await supabase
-        .from('bottles')
-        .select('*')
-        .eq('id', id)
-        .single();
-      if (cancelled) return;
-      setBottle(b);
+    // 超时兜底：6 秒没结果就停 loading，避免永久卡「drifting...」
+    const safety = setTimeout(() => {
+      if (!cancelled) { setLoading(false); setErrorKind('load_failed'); }
+    }, 6000);
 
-      // 漂流事件（如果有 bottle_events 表）
+    const fetchDetail = async () => {
       try {
-        const { data: evts } = await supabase
-          .from('bottle_events')
-          .select('*')
-          .eq('bottle_id', id)
-          .order('created_at', { ascending: true });
-        if (!cancelled && evts) setEvents(evts as any[]);
-      } catch {
-        // bottle_events 表可能不存在，忽略
+        const { data, error } = await supabase.rpc('get_bottle_detail' as any, { p_bottle_id: id });
+        clearTimeout(safety);
+        if (cancelled) return;
+        if (error || !data) {
+          setErrorKind('load_failed');
+          setLoading(false);
+          return;
+        }
+        const res = data as any;
+        if (res.error === 'not_found') { setErrorKind('not_found'); setLoading(false); return; }
+        if (res.error === 'not_owner') { setErrorKind('not_owner'); setLoading(false); return; }
+        setBottle(res.bottle);
+        setEvents((res.events || []) as BottleEvent[]);
+        setLoading(false);
+      } catch (e) {
+        clearTimeout(safety);
+        if (!cancelled) { setErrorKind('load_failed'); setLoading(false); }
       }
-      setLoading(false);
     };
 
     fetchDetail();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; clearTimeout(safety); };
   }, [id, profile]);
 
-  if (loading || !bottle) {
+  if (loading) {
     return (
       <>
         <AppNav />
@@ -71,8 +73,11 @@ export default function BottleDetail() {
     );
   }
 
-  // 只有瓶主才能看详情
-  if (bottle.thrower_id !== profile?.id) {
+  // 错误状态：瓶子不存在 / 不是瓶主 / 加载失败
+  if (errorKind || !bottle) {
+    const msg = errorKind === 'not_owner' ? '这是别人的瓶子'
+      : errorKind === 'not_found' ? '这个瓶子已经不在海里了'
+      : '加载失败，请稍后再试';
     return (
       <>
         <AppNav />
@@ -85,7 +90,7 @@ export default function BottleDetail() {
           fontSize: 14, letterSpacing: 2,
           gap: 16,
         }}>
-          这是别人的瓶子
+          {msg}
           <Link to="/sea" className="btn btn-ghost" style={{ fontSize: 12, letterSpacing: 2 }}>
             回到海面
           </Link>
@@ -157,7 +162,7 @@ export default function BottleDetail() {
               color: 'rgba(255,255,255,0.9)',
               fontWeight: 500,
             }}>
-              No.{bottle.bottle_no}
+              No.{bottle.owner_no}
             </div>
             <div style={{
               fontSize: isNarrow ? 10 : 11,
