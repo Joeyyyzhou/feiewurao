@@ -3,8 +3,10 @@
 // 公开 endpoint：生成验证码 + 发邮件
 import { createClient } from '@supabase/supabase-js';
 import { getTransporter, passwordResetMail } from './_mail.js';
+import { applyCors } from './_cors.js';
 
 export default async function handler(req, res) {
+  if (applyCors(req, res)) return;
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'method not allowed' });
     return;

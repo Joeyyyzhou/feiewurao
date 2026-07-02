@@ -2,8 +2,10 @@
 // body: { email, code, newPassword }
 // 公开 endpoint：用验证码 + 新密码重置
 import { createClient } from '@supabase/supabase-js';
+import { applyCors } from './_cors.js';
 
 export default async function handler(req, res) {
+  if (applyCors(req, res)) return;
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'method not allowed' });
     return;
