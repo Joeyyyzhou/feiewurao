@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import AppNav from '../components/AppNav';
 import AboutDrawer from '../components/AboutDrawer';
@@ -8,26 +8,13 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useIsNarrow } from '../lib/useIsNarrow';
 
-interface MyBottle {
-  id: string;
-  owner_no: string;
-  mood: string;
-  content: string;
-  status: string;
-  created_at: string;
-  has_conversation: boolean;
-}
-
 export default function Sea() {
   const { profile } = useAuth();
   const loc = useLocation();
-  const navigate = useNavigate();
   const fromReply = loc.search.includes('fromReply');
   const [thrown, setThrown] = useState(0);
   const [picked, setPicked] = useState(0);
   const [toastShow, setToastShow] = useState(fromReply);
-  const [myBottles, setMyBottles] = useState<MyBottle[]>([]);
-  const [bottlesLoading, setBottlesLoading] = useState(false);
   const isNarrow = useIsNarrow();
 
   useEffect(() => {
@@ -57,61 +44,20 @@ export default function Sea() {
       });
   }, [profile]);
 
-  const fetchMyBottles = useCallback(async () => {
-    if (!profile) return;
-    setBottlesLoading(true);
-    try {
-      const { data, error } = await supabase.rpc('list_my_bottles' as any);
-      if (!error && data) {
-        setMyBottles(data as MyBottle[]);
-      }
-    } catch (e) {
-      console.warn('[sea] list_my_bottles error:', e);
-    } finally {
-      setBottlesLoading(false);
-    }
-  }, [profile]);
-
   useEffect(() => {
     if (!profile) return;
-    let cancelled = false;
 
-    const doFetch = () => {
-      fetchQuota();
-      fetchMyBottles();
-    };
+    fetchQuota();
 
-    doFetch();
-
-    const onVisible = () => { if (!document.hidden) doFetch(); };
+    const onVisible = () => { if (!document.hidden) fetchQuota(); };
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', doFetch);
+    window.addEventListener('focus', fetchQuota);
 
     return () => {
-      cancelled = true;
       document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', doFetch);
+      window.removeEventListener('focus', fetchQuota);
     };
-  }, [profile, loc.search, loc.key, fetchQuota, fetchMyBottles]);
-
-  const moodLabel: Record<string, string> = {
-    happy: '开心', sad: '难过', angry: '生气',
-    anxious: '焦虑', excited: '兴奋', tired: '疲惫',
-    calm: '平静', lonely: '孤独', grateful: '感恩',
-    confused: '困惑', hopeful: '希望',
-  };
-
-  const formatTime = (ts: string) => {
-    const d = new Date(ts);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffH = Math.floor(diffMs / 3600000);
-    if (diffH < 1) return '刚刚';
-    if (diffH < 24) return `${diffH}h前`;
-    const diffD = Math.floor(diffH / 24);
-    if (diffD < 7) return `${diffD}天前`;
-    return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
-  };
+  }, [profile, loc.search, loc.key, fetchQuota]);
 
   return (
     <>
@@ -140,9 +86,7 @@ export default function Sea() {
 
         {/* 标题区 */}
         <div style={{
-          padding: myBottles.length === 0
-            ? (isNarrow ? '20vh 24px 0' : '22vh 56px 0')
-            : (isNarrow ? '100px 24px 0' : '140px 56px 0'),
+          padding: isNarrow ? '20vh 24px 0' : '22vh 56px 0',
           textAlign: 'center', color: '#fff',
         }}>
           <div style={{
@@ -180,10 +124,8 @@ export default function Sea() {
           justifyContent: 'center',
           flexWrap: 'nowrap',
           whiteSpace: 'nowrap',
-          marginTop: myBottles.length === 0 ? 'auto' : 0,
-          padding: myBottles.length === 0
-            ? (isNarrow ? '0 24px 8vh' : '0 56px 10vh')
-            : (isNarrow ? '32px 24px 0' : '48px 56px 0'),
+          marginTop: 'auto',
+          padding: isNarrow ? '0 24px 8vh' : '0 56px 10vh',
         }}>
           {thrown >= 3 && picked >= 3 ? (
             <Link to="/friends" className="btn btn-primary">
@@ -214,101 +156,6 @@ export default function Sea() {
             </>
           )}
         </div>
-
-        {/* 我的瓶子列表 */}
-        {myBottles.length > 0 && (
-          <div style={{
-            padding: isNarrow ? '28px 20px 0' : '40px 56px 0',
-            maxWidth: 520,
-            margin: '0 auto',
-          }}>
-            <div style={{
-              fontFamily: "'Cormorant Garamond', serif",
-              fontSize: isNarrow ? 11 : 13,
-              color: 'rgba(255,255,255,0.55)',
-              letterSpacing: isNarrow ? 3 : 5,
-              textTransform: 'uppercase',
-              marginBottom: isNarrow ? 12 : 16,
-              textAlign: 'center',
-            }}>
-              我的瓶子
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {myBottles.map(b => {
-                const isActive = b.status === 'active';
-                const isReplied = b.has_conversation;
-                const statusLabel = isActive ? '漂流中' : isReplied ? '已回信' : '已沉底';
-                const statusColor = isActive
-                  ? 'rgba(74,194,255,0.85)'
-                  : isReplied
-                  ? 'rgba(255,184,77,0.85)'
-                  : 'rgba(255,255,255,0.4)';
-                return (
-                  <div
-                    key={b.id}
-                    onClick={() => navigate(`/bottle/${b.id}`)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 12,
-                      padding: '12px 16px',
-                      background: 'rgba(255,255,255,0.06)',
-                      backdropFilter: 'blur(24px)',
-                      borderRadius: 14,
-                      border: '0.5px solid rgba(255,255,255,0.12)',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
-                  >
-                    {/* 状态圆点 */}
-                    <div style={{
-                      width: 8, height: 8, borderRadius: '50%',
-                      background: statusColor,
-                      flexShrink: 0,
-                    }} />
-                    {/* 瓶子编号 + 心情 */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontSize: isNarrow ? 12 : 13,
-                        color: 'rgba(255,255,255,0.9)',
-                        fontFamily: "'Cormorant Garamond', serif",
-                        fontWeight: 500,
-                        marginBottom: 2,
-                      }}>
-                        No.{b.owner_no} · {moodLabel[b.mood] || b.mood}
-                      </div>
-                      {/* 内容预览 */}
-                      <div style={{
-                        fontSize: isNarrow ? 11 : 12,
-                        color: 'rgba(255,255,255,0.5)',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}>
-                        {b.content.slice(0, 40)}
-                      </div>
-                    </div>
-                    {/* 状态 + 时间 */}
-                    <div style={{
-                      fontSize: isNarrow ? 10 : 11,
-                      color: statusColor,
-                      fontFamily: "'Cormorant Garamond', serif",
-                      fontStyle: 'italic',
-                      flexShrink: 0,
-                      textAlign: 'right',
-                      lineHeight: 1.4,
-                    }}>
-                      <div>{statusLabel}</div>
-                      <div style={{ opacity: 0.7 }}>{formatTime(b.created_at)}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
       </main>
 
