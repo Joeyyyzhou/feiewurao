@@ -98,21 +98,6 @@ export default function Landing() {
           >
             进入海面
           </button>
-          <button
-            onClick={() => nav('/apply')}
-            style={{
-              width: '100%', marginTop: 10,
-              padding: '13px 24px',
-              background: 'transparent',
-              color: 'rgba(255,255,255,0.78)',
-              border: '0.5px solid rgba(255,255,255,0.28)',
-              borderRadius: 12,
-              fontSize: 14, letterSpacing: 3,
-              cursor: 'pointer',
-            }}
-          >
-            没有邀请码？申请一个
-          </button>
           <div style={{
             textAlign: 'center', marginTop: 14,
             fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic',
