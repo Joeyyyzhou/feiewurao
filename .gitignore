@@ -8,3 +8,4 @@ dist/
 *.old
 .env.production
 supabase/.temp/
+vite.config.ts.timestamp-*.mjs
