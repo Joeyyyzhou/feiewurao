@@ -68,3 +68,29 @@ export function passwordResetMail(toEmail, code) {
     `,
   };
 }
+
+export function registerCodeMail(toEmail, code) {
+  return {
+    from: '"非鹅勿扰漂流瓶" <noreply@feiewurao.cn>',
+    to: toEmail,
+    subject: '🌊 注册验证码 — 非鹅勿扰漂流瓶',
+    html: `
+      <div style="max-width:480px;margin:0 auto;padding:36px;font-family:-apple-system,'PingFang SC',sans-serif;text-align:center;background:#fafaf9;border-radius:16px">
+        <div style="font-size:42px;margin-bottom:12px">🌊</div>
+        <h2 style="color:#1E1833;margin-bottom:8px;font-size:20px">欢迎登船</h2>
+        <p style="color:#5C5480;font-size:14px;margin-bottom:28px;line-height:1.8">
+          你正在注册非鹅勿扰漂流瓶，<br/>
+          一个仅鹅厂员工可用的匿名漂流瓶社区
+        </p>
+        <div style="background:#fff;border:2px solid #1E1833;border-radius:14px;padding:24px;margin-bottom:24px">
+          <p style="color:#9B93B5;font-size:11px;letter-spacing:3px;margin-bottom:10px;margin-top:0">VERIFICATION CODE</p>
+          <p style="color:#1E1833;font-size:34px;letter-spacing:14px;margin:0;font-weight:600;font-family:'Cormorant Garamond',serif">${code}</p>
+        </div>
+        <p style="color:#9B93B5;font-size:12px;margin-top:8px;line-height:1.7">
+          回到页面输入验证码即可完成注册 · 验证码 10 分钟内有效<br/>
+          如果不是你本人操作请忽略此邮件
+        </p>
+      </div>
+    `,
+  };
+}

@@ -15,7 +15,6 @@ import Me            from './pages/Me';
 // 次要页面保留 code splitting
 const Landing        = lazy(() => import('./pages/Landing'));
 const Register       = lazy(() => import('./pages/Register'));
-const ApplyInvite   = lazy(() => import('./pages/ApplyInvite'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const Throw          = lazy(() => import('./pages/Throw'));
 const Pick           = lazy(() => import('./pages/Pick'));
@@ -26,7 +25,6 @@ const BottleDetail   = lazy(() => import('./pages/BottleDetail'));
 function prefetchChunks() {
   void import('./pages/Landing');
   void import('./pages/Register');
-  void import('./pages/ApplyInvite');
   void import('./pages/ForgotPassword');
   void import('./pages/Throw');
   void import('./pages/Pick');
@@ -59,7 +57,6 @@ function App() {
         <Routes>
           <Route path="/" element={<HomeRoute />} />
           <Route path="register" element={<Register />} />
-          <Route path="apply" element={<ApplyInvite />} />
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="sea" element={<RequireAuth><Sea /></RequireAuth>} />
           <Route path="friends" element={<RequireAuth><Friends /></RequireAuth>} />
