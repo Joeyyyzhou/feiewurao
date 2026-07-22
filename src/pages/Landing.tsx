@@ -8,6 +8,27 @@ export default function Landing() {
 
   return (
     <>
+      {/* 右上角：下载 Mac 菜单栏客户端 */}
+      <button
+        onClick={() => nav('/download')}
+        style={{
+          position: 'fixed', top: isNarrow ? 14 : 20, right: isNarrow ? 16 : 28, zIndex: 10,
+          display: 'flex', alignItems: 'center', gap: 7,
+          padding: isNarrow ? '7px 13px' : '9px 16px',
+          background: 'rgba(255,255,255,0.14)',
+          backdropFilter: 'blur(20px) saturate(1.4)',
+          WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+          border: '0.5px solid rgba(255,255,255,0.34)',
+          borderRadius: 999,
+          color: '#fff',
+          fontSize: isNarrow ? 12 : 13, letterSpacing: 1,
+          textShadow: '0 1px 6px rgba(0,0,0,0.4)',
+          cursor: 'pointer',
+        }}
+      >
+        <span style={{ fontSize: isNarrow ? 13 : 15 }}>🍶</span>
+        {isNarrow ? 'Mac 客户端' : '下载 Mac 菜单栏工具'}
+      </button>
       <main style={{
         position: 'relative', zIndex: 1, minHeight: '100vh',
         padding: isNarrow ? '76px 24px 60px' : '120px 56px 80px',

@@ -9,3 +9,4 @@ dist/
 .env.production
 supabase/.temp/
 vite.config.ts.timestamp-*.mjs
+public/download/

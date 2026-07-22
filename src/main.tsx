@@ -20,6 +20,7 @@ const Throw          = lazy(() => import('./pages/Throw'));
 const Pick           = lazy(() => import('./pages/Pick'));
 const Chat           = lazy(() => import('./pages/Chat'));
 const BottleDetail   = lazy(() => import('./pages/BottleDetail'));
+const Download       = lazy(() => import('./pages/Download'));
 
 // 预加载次要页面的 chunk（空闲时触发）
 function prefetchChunks() {
@@ -57,6 +58,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomeRoute />} />
           <Route path="register" element={<Register />} />
+          <Route path="download" element={<Download />} />
           <Route path="forgot-password" element={<ForgotPassword />} />
           <Route path="sea" element={<RequireAuth><Sea /></RequireAuth>} />
           <Route path="friends" element={<RequireAuth><Friends /></RequireAuth>} />
