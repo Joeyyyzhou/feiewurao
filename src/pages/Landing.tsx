@@ -15,14 +15,14 @@ export default function Landing() {
           position: 'fixed', top: isNarrow ? 14 : 20, right: isNarrow ? 16 : 28, zIndex: 110,
           display: 'flex', alignItems: 'center', gap: 7,
           padding: isNarrow ? '8px 14px' : '10px 18px',
-          background: 'rgba(12, 34, 48, 0.82)',
+          background: 'rgba(8, 22, 34, 0.95)',
           backdropFilter: 'blur(20px) saturate(1.4)',
           WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
-          border: '1px solid rgba(255,255,255,0.55)',
+          border: '1.5px solid rgba(255,255,255,0.7)',
           borderRadius: 999,
           color: '#fff',
           fontSize: isNarrow ? 12 : 14, letterSpacing: 1, fontWeight: 500,
-          boxShadow: '0 4px 18px rgba(0,0,0,0.45)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.55)',
           cursor: 'pointer',
         }}
       >
@@ -118,6 +118,22 @@ export default function Landing() {
             onClick={() => nav('/register')}
           >
             进入海面
+          </button>
+          <button
+            onClick={() => nav('/download')}
+            style={{
+              width: '100%', justifyContent: 'center', marginTop: 12,
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '12px 24px', borderRadius: 999,
+              fontFamily: "'Source Han Serif CN VF Medium', serif",
+              fontSize: 14, letterSpacing: 2,
+              background: 'rgba(255,255,255,0.14)',
+              border: '1px solid rgba(255,255,255,0.4)',
+              color: '#fff', cursor: 'pointer',
+              backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+            }}
+          >
+            <span style={{ fontSize: 16 }}>🍶</span> 下载 Mac 菜单栏客户端
           </button>
           <div style={{
             textAlign: 'center', marginTop: 14,
