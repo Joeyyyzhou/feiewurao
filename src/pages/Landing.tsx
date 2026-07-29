@@ -12,7 +12,7 @@ export default function Landing() {
       <button
         onClick={() => nav('/download')}
         style={{
-          position: 'fixed', top: isNarrow ? 14 : 20, right: isNarrow ? 16 : 28, zIndex: 10,
+          position: 'fixed', top: isNarrow ? 14 : 20, right: isNarrow ? 16 : 28, zIndex: 110,
           display: 'flex', alignItems: 'center', gap: 7,
           padding: isNarrow ? '7px 13px' : '9px 16px',
           background: 'rgba(255,255,255,0.14)',
