@@ -14,20 +14,20 @@ export default function Landing() {
         style={{
           position: 'fixed', top: isNarrow ? 14 : 20, right: isNarrow ? 16 : 28, zIndex: 110,
           display: 'flex', alignItems: 'center', gap: 7,
-          padding: isNarrow ? '7px 13px' : '9px 16px',
-          background: 'rgba(255,255,255,0.14)',
+          padding: isNarrow ? '8px 14px' : '10px 18px',
+          background: 'rgba(12, 34, 48, 0.82)',
           backdropFilter: 'blur(20px) saturate(1.4)',
           WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
-          border: '0.5px solid rgba(255,255,255,0.34)',
+          border: '1px solid rgba(255,255,255,0.55)',
           borderRadius: 999,
           color: '#fff',
-          fontSize: isNarrow ? 12 : 13, letterSpacing: 1,
-          textShadow: '0 1px 6px rgba(0,0,0,0.4)',
+          fontSize: isNarrow ? 12 : 14, letterSpacing: 1, fontWeight: 500,
+          boxShadow: '0 4px 18px rgba(0,0,0,0.45)',
           cursor: 'pointer',
         }}
       >
-        <span style={{ fontSize: isNarrow ? 13 : 15 }}>🍶</span>
-        {isNarrow ? 'Mac 客户端' : '下载 Mac 菜单栏工具'}
+        <span style={{ fontSize: isNarrow ? 13 : 16 }}>🍶</span>
+        {isNarrow ? 'Mac 客户端' : '下载 Mac 客户端'}
       </button>
       <main style={{
         position: 'relative', zIndex: 1, minHeight: '100vh',
