@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIsNarrow } from '../lib/useIsNarrow';
 import { supabase } from '../lib/supabase';
@@ -145,6 +145,7 @@ export default function AppNav() {
         ) : (
           <>潮水重涌于明日 <em style={emStyle}>0</em>:<em style={emStyle}>00</em> · 还有 <em style={emStyle}>{countdown.h}</em>:<em style={emStyle}>{countdown.m}</em></>
         )}
+      </div>
       </div>
     </nav>
   );
