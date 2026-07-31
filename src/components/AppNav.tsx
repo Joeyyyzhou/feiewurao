@@ -116,21 +116,21 @@ export default function AppNav() {
         <button
           onClick={() => nav('/download')}
           style={{
-            background: 'rgba(255,255,255,0.15)',
-            border: '1px solid rgba(255,255,255,0.4)',
-            borderRadius: 999,
-            color: '#fff', cursor: 'pointer',
-            padding: isNarrow ? '5px 11px' : '6px 14px',
+            background: 'transparent',
+            border: 'none',
+            color: 'rgba(255,255,255,0.55)',
+            cursor: 'pointer',
+            padding: 0,
             fontSize: isNarrow ? 11 : 12,
             letterSpacing: 1.5,
             fontFamily: '"Source Han Serif CN VF Light", serif',
             textShadow: '0 1px 6px rgba(0,0,0,0.45)',
-            display: 'flex', alignItems: 'center', gap: 5,
             whiteSpace: 'nowrap',
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.9)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.55)')}
         >
-          <span style={{ fontSize: isNarrow ? 12 : 14 }}>🫙</span>
-          {isNarrow ? '桌面版' : 'Mac 桌面版'}
+          🫙 桌面版
         </button>
         <div style={{
         fontSize: isNarrow ? 11 : 12,
