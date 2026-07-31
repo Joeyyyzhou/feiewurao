@@ -129,7 +129,7 @@ export default function AppNav() {
             whiteSpace: 'nowrap',
           }}
         >
-          <span style={{ fontSize: isNarrow ? 12 : 14 }}>🍶</span>
+          <span style={{ fontSize: isNarrow ? 12 : 14 }}>🫙</span>
           {isNarrow ? '桌面版' : 'Mac 桌面版'}
         </button>
         <div style={{

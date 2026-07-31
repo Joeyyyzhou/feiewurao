@@ -33,7 +33,7 @@ export default function Download() {
       color: '#fff', textShadow: '0 2px 20px rgba(0,0,0,0.5)',
     }}>
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <div style={{ fontSize: 46, marginBottom: 10 }}>🍶</div>
+        <div style={{ fontSize: 46, marginBottom: 10 }}>🫙</div>
         <h1 style={{ fontSize: isNarrow ? 24 : 30, fontWeight: 300, letterSpacing: 3, margin: 0, marginBottom: 12 }}>
           非鹅勿扰 · Mac 菜单栏工具
         </h1>
@@ -54,8 +54,8 @@ export default function Download() {
         boxShadow: '0 16px 48px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.4)',
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 22 }}>
-          {cardBtn('Apple 芯片 (M1/M2/M3/M4)', '2020 年后的 Mac 多为此类', 'https://github.com/Joeyyyzhou/feiewurao/releases/download/v1.0.0-mac/feiewurao-mac-arm64.dmg')}
-          {cardBtn('Intel 芯片', '较早期的 Intel Mac', 'https://github.com/Joeyyyzhou/feiewurao/releases/download/v1.0.0-mac/feiewurao-mac-x64.dmg')}
+          {cardBtn('Apple 芯片 (M1/M2/M3/M4)', '', 'https://github.com/Joeyyyzhou/feiewurao/releases/download/v1.0.0-mac/feiewurao-mac-arm64.dmg')}
+          {cardBtn('Intel 芯片', '', 'https://github.com/Joeyyyzhou/feiewurao/releases/download/v1.0.0-mac/feiewurao-mac-x64.dmg')}
         </div>
 
         <div style={{

@@ -26,7 +26,7 @@ export default function Landing() {
           cursor: 'pointer',
         }}
       >
-        <span style={{ fontSize: isNarrow ? 13 : 16 }}>🍶</span>
+        <span style={{ fontSize: isNarrow ? 13 : 16 }}>🫙</span>
         {isNarrow ? 'Mac 客户端' : '下载 Mac 客户端'}
       </button>
       <main style={{
@@ -133,7 +133,7 @@ export default function Landing() {
               backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
             }}
           >
-            <span style={{ fontSize: 16 }}>🍶</span> 下载 Mac 菜单栏客户端
+            <span style={{ fontSize: 16 }}>🫙</span> 下载 Mac 菜单栏客户端
           </button>
           <div style={{
             textAlign: 'center', marginTop: 14,
