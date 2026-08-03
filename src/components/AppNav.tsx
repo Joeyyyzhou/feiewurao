@@ -113,24 +113,25 @@ export default function AppNav() {
         marginLeft: 'auto',
         display: 'flex', alignItems: 'center', gap: isNarrow ? 8 : 16,
       }}>
-        <button
+     <button
           onClick={() => nav('/download')}
           style={{
-            background: 'transparent',
+         background: 'rgba(255,255,255,0.12)',
             border: 'none',
-            color: 'rgba(255,255,255,0.55)',
+     borderRadius: 6,
+   color: 'rgba(255,255,255,0.88)',
             cursor: 'pointer',
-            padding: 0,
-            fontSize: isNarrow ? 11 : 12,
-            letterSpacing: 1.5,
-            fontFamily: '"Source Han Serif CN VF Light", serif',
-            textShadow: '0 1px 6px rgba(0,0,0,0.45)',
-            whiteSpace: 'nowrap',
+          padding: isNarrow ? '4px 10px' : '5px 12px',
+   fontSize: isNarrow ? 11 : 12,
+            letterSpacing: 1,
+   fontFamily: '"Source Han Serif CN VF Light", serif',
+            textShadow: '0 1px 4px rgba(0,0,0,0.3)',
+    whiteSpace: 'nowrap',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.9)')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.55)')}
-        >
-          🫙 桌面版
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+      >
+        🫙 桌面版
         </button>
         <div style={{
         fontSize: isNarrow ? 11 : 12,
