@@ -118,7 +118,7 @@ export default function AppNav() {
           style={{
          background: 'rgba(255,255,255,0.12)',
             border: 'none',
-     borderRadius: 6,
+     borderRadius: 999,
    color: 'rgba(255,255,255,0.88)',
             cursor: 'pointer',
           padding: isNarrow ? '4px 10px' : '5px 12px',
