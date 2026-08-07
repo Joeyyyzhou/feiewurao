@@ -1,15 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function BgVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [opacity, setOpacity] = useState(1);
 
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    // 确保视频能自动播放（部分浏览器需要手动 trigger）
+
     const tryPlay = () => {
       el.play().catch(() => {
-        // 若 autoplay 被拦，等待用户第一次交互后再播
         const onUserAction = () => {
           el.play().catch(() => {});
           document.removeEventListener('click', onUserAction);
@@ -21,12 +21,35 @@ export default function BgVideo() {
     };
     tryPlay();
     el.addEventListener('pause', tryPlay);
-    return () => { el.removeEventListener('pause', tryPlay); };
+
+    // 在视频接近结尾时淡出，循环开始时淡入，消除跳切感
+    const FADE_DURATION = 1.5; // 秒
+    let raf: number;
+
+    const checkFade = () => {
+      if (!el.duration || el.paused) {raf = requestAnimationFrame(checkFade); return; }
+      const remaining = el.duration - el.currentTime;
+      if (remaining <= FADE_DURATION) {
+        // 接近结尾：淡出
+        setOpacity(Math.max(0, remaining / FADE_DURATION));
+      } else if (el.currentTime <= FADE_DURATION) {
+        // 刚从头开始：淡入
+        setOpacity(Math.min(1, el.currentTime / FADE_DURATION));
+      } else {
+        setOpacity(1);
+      }
+      raf = requestAnimationFrame(checkFade);
+    };
+    raf = requestAnimationFrame(checkFade);
+
+    return () => {
+      el.removeEventListener('pause', tryPlay);
+      cancelAnimationFrame(raf);
+    };
   }, []);
 
   return (
     <div className="bg-video-wrap">
-      {/* poster 仅在视频加载前显示，视频播起来后会被盖住 */}
       <img src="/ocean-poster.jpg" className="bg-poster" alt="" />
       <video
         ref={videoRef}
@@ -36,7 +59,11 @@ export default function BgVideo() {
         muted
         playsInline
         preload="auto"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 2, background: 'transparent' }}
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover', zIndex: 2, background: 'transparent',
+          opacity, transition: 'opacity 0.1s linear',
+        }}
       >
         <source src="/ocean-1080p.mp4" type="video/mp4" />
       </video>
