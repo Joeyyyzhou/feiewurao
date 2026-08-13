@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 export default function BgVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [opacity, setOpacity] = useState(1);
 
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-
+    el.playbackRate = 0.82;
     const tryPlay = () => {
       el.play().catch(() => {
         const onUserAction = () => {
@@ -21,31 +20,7 @@ export default function BgVideo() {
     };
     tryPlay();
     el.addEventListener('pause', tryPlay);
-
-    // 在视频接近结尾时淡出，循环开始时淡入，消除跳切感
-    const FADE_DURATION = 1.5; // 秒
-    let raf: number;
-
-    const checkFade = () => {
-      if (!el.duration || el.paused) {raf = requestAnimationFrame(checkFade); return; }
-      const remaining = el.duration - el.currentTime;
-      if (remaining <= FADE_DURATION) {
-        // 接近结尾：淡出
-        setOpacity(Math.max(0, remaining / FADE_DURATION));
-      } else if (el.currentTime <= FADE_DURATION) {
-        // 刚从头开始：淡入
-        setOpacity(Math.min(1, el.currentTime / FADE_DURATION));
-      } else {
-        setOpacity(1);
-      }
-      raf = requestAnimationFrame(checkFade);
-    };
-    raf = requestAnimationFrame(checkFade);
-
-    return () => {
-      el.removeEventListener('pause', tryPlay);
-      cancelAnimationFrame(raf);
-    };
+    return () => { el.removeEventListener('pause', tryPlay); };
   }, []);
 
   return (
@@ -59,11 +34,7 @@ export default function BgVideo() {
         muted
         playsInline
         preload="auto"
-        style={{
-          position: 'absolute', inset: 0, width: '100%', height: '100%',
-          objectFit: 'cover', zIndex: 2, background: 'transparent',
-          opacity, transition: 'opacity 0.1s linear',
-        }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 2, background: 'transparent' }}
       >
         <source src="/ocean-1080p.mp4" type="video/mp4" />
       </video>
