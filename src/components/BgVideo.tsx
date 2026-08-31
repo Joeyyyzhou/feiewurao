@@ -6,7 +6,6 @@ export default function BgVideo() {
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    el.playbackRate = 0.82;
     const tryPlay = () => {
       el.play().catch(() => {
         const onUserAction = () => {
@@ -36,7 +35,7 @@ export default function BgVideo() {
         preload="auto"
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 2, background: 'transparent' }}
       >
-        <source src="/ocean-1080p.mp4" type="video/mp4" />
+        <source src="/ocean-loop.mp4" type="video/mp4" />
       </video>
     </div>
   );
