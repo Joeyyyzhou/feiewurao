@@ -17,7 +17,7 @@ export default function Download() {
         margin: 0, marginBottom: 10, textAlign: 'center',
         textShadow: '0 2px 16px rgba(0,0,0,0.4)',
       }}>
-        下载 Mac桌面版
+        下载桌面版
       </h1>
       <p style={{
         fontSize: isNarrow ? 12 : 13, color: 'rgba(255,255,255,0.7)',
@@ -68,6 +68,24 @@ export default function Download() {
         >
           ⬇ Intel 芯片
         </a>
+        <a
+          href="https://github.com/Joeyyyzhou/feiewurao/releases/download/v1.0.0-mac/feiewurao-win-x64.zip"
+          download
+          style={{
+            display: 'block', textAlign: 'center', textDecoration: 'none',
+            padding: '14px 0',
+            background: 'rgba(255,255,255,0.15)',
+            border: '1px solid rgba(255,255,255,0.4)',
+            borderRadius: 10,
+            color: '#fff',
+            fontSize: 14, fontWeight: 400, letterSpacing: 1,
+            transition: 'background 0.12s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+        >
+          ⬇ Windows (64 位)
+        </a>
       </div>
 
       {/* 安装提示 — 弱层级 */}
@@ -76,13 +94,17 @@ export default function Download() {
         fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.9,
         letterSpacing: 0.3, textShadow: '0 1px 6px rgba(0,0,0,0.3)',
       }}>
-        <div style={{ marginBottom: 8, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>安装提示</div>
+        <div style={{ marginBottom: 8, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>Mac 安装</div>
         1. 双击 .dmg → 把图标拖进「应用程序」<br />
         2. 首次打开右键图标 → 打开 → 再点打开<br />
         3. 看屏幕右上角菜单栏的漂流瓶图标<br />
         <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11}}>
           不确定芯片？ → 关于本机 → 芯片/处理器
         </span>
+        <div style={{ marginTop: 14, marginBottom: 8, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>Windows 安装</div>
+        1. 解压 .zip → 双击「非鹅勿扰.exe」运行<br />
+        2. 若弹 SmartScreen → 更多信息 → 仍要运行<br />
+        3. 看屏幕右下角系统托盘的漂流瓶图标
       </div>
 
       <Link to="/" style={{
