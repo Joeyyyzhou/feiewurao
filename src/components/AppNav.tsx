@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIsNarrow } from '../lib/useIsNarrow';
 import { supabase } from '../lib/supabase';
@@ -6,7 +6,6 @@ import { useAuth } from '../lib/auth';
 
 export default function AppNav() {
   const loc = useLocation();
-  const nav = useNavigate();
   const path = loc.pathname;
   const isSea = path === '/' || path === '/sea';
   const isNarrow = useIsNarrow();
@@ -113,26 +112,6 @@ export default function AppNav() {
         marginLeft: 'auto',
         display: 'flex', alignItems: 'center', gap: isNarrow ? 8 : 16,
       }}>
-     <button
-          onClick={() => nav('/download')}
-          style={{
-         background: 'rgba(255,255,255,0.12)',
-            border: 'none',
-     borderRadius: 999,
-   color: 'rgba(255,255,255,0.88)',
-            cursor: 'pointer',
-          padding: isNarrow ? '4px 10px' : '5px 12px',
-   fontSize: isNarrow ? 11 : 12,
-            letterSpacing: 1,
-   fontFamily: '"Source Han Serif CN VF Light", serif',
-            textShadow: '0 1px 4px rgba(0,0,0,0.3)',
-    whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
-      >
-        🫙 桌面版
-        </button>
         <div style={{
         fontSize: isNarrow ? 11 : 12,
         fontFamily: '"Source Han Serif CN VF Light", serif',
