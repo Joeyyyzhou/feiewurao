@@ -12,15 +12,35 @@ import Sea           from './pages/Sea';
 import Friends       from './pages/Friends';
 import Me            from './pages/Me';
 
+// 懒加载 + 失败自愈：重新部署后旧 index.html 引用的旧分块会 404/挂起，
+// 导致永久卡「drifting…」。这里捕获动态 import 失败，自动强制刷新一次拉取新版本。
+function lazyWithReload<T extends React.ComponentType<any>>(factory: () => Promise<{ default: T }>) {
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (err) {
+      const KEY = '__chunk_reload_ts';
+      const last = Number(sessionStorage.getItem(KEY) || 0);
+      // 10s 内只自愈刷新一次，避免死循环
+      if (Date.now() - last > 10000) {
+        sessionStorage.setItem(KEY, String(Date.now()));
+        window.location.reload();
+        return new Promise<{ default: T }>(() => {}); // 挂起等待刷新
+      }
+      throw err;
+    }
+  });
+}
+
 // 次要页面保留 code splitting
-const Landing        = lazy(() => import('./pages/Landing'));
-const Register       = lazy(() => import('./pages/Register'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const Throw          = lazy(() => import('./pages/Throw'));
-const Pick           = lazy(() => import('./pages/Pick'));
-const Chat           = lazy(() => import('./pages/Chat'));
-const BottleDetail   = lazy(() => import('./pages/BottleDetail'));
-const Download       = lazy(() => import('./pages/Download'));
+const Landing        = lazyWithReload(() => import('./pages/Landing'));
+const Register       = lazyWithReload(() => import('./pages/Register'));
+const ForgotPassword = lazyWithReload(() => import('./pages/ForgotPassword'));
+const Throw          = lazyWithReload(() => import('./pages/Throw'));
+const Pick           = lazyWithReload(() => import('./pages/Pick'));
+const Chat           = lazyWithReload(() => import('./pages/Chat'));
+const BottleDetail   = lazyWithReload(() => import('./pages/BottleDetail'));
+const Download       = lazyWithReload(() => import('./pages/Download'));
 
 // 预加载次要页面的 chunk（空闲时触发）
 function prefetchChunks() {
