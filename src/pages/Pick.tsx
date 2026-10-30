@@ -15,6 +15,14 @@ const REPLY_EMOJI: Record<string, string> = {
 // 草稿键：bottleId 维度，确保切换瓶子时不串
 const replyDraftKey = (bottleId: string) => `fewr.reply.draft.${bottleId}`;
 
+// 信笺落款日期（如「10月30日」），与投瓶页一致；无效时间兜底为空
+function formatBottleDate(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
 interface PickedBottle {
   id: string;
   content: string;
@@ -171,7 +179,7 @@ export default function Pick() {
               <>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 13, color: 'rgba(255,255,255,0.55)', letterSpacing: 4, marginBottom: 8 }}>a letter from</div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', letterSpacing: 3, marginBottom: 28, borderBottom: '0.5px solid rgba(255,255,255,0.18)', paddingBottom: 14, display: 'flex', justifyContent: 'space-between' }}>
-                  <span>No. <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', color: 'rgba(255,255,255,0.95)' }}>{bottle.author_no}</em>　·　刚才</span>
+                  <span>No. <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', color: 'rgba(255,255,255,0.95)' }}>{bottle.author_no}</em>　·　{formatBottleDate(bottle.created_at)}</span>
                   <span style={{ display: 'inline-block', padding: '5px 14px', borderRadius: 999, background: 'rgba(255,255,255,0.12)', border: '0.5px solid rgba(255,255,255,0.4)', color: '#fff', fontSize: 12, letterSpacing: 2 }}>{bottle.mood}</span>
                 </div>
 
