@@ -13,8 +13,13 @@ const MOOD_EMOJI: Record<Mood, string> = {
 const DRAFT_KEY = 'fewr.throw.draft';
 
 export default function Throw() {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const nav = useNavigate();
+  // 信笺落款日期：随真实日期变化（如「10月30日」）
+  const dateLabel = (() => {
+    const d = new Date();
+    return `${d.getMonth() + 1}月${d.getDate()}日`;
+  })();
   const [content, setContent] = useState('');
   const [mood, setMood] = useState<Mood | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -40,6 +45,14 @@ export default function Throw() {
     } catch { /* ignore */ }
   }, []);
 
+  // 若进页面时个人资料（含编号）还没加载到位，主动补拉一次——
+  // 否则编号会显示 ----，且提交逻辑会因 profile 为空而静默失败（点了没反应）。
+  useEffect(() => {
+    if (!profile) void refreshProfile();
+    // 仅在 profile 缺失时触发；refreshProfile 为稳定引用
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
+
   // 自动保存草稿（debounce 不严格，simple 即可）
   useEffect(() => {
     if (!content.trim() && !mood) return;
@@ -50,7 +63,13 @@ export default function Throw() {
   }, [content, mood]);
 
   async function submit() {
-    if (!profile || !mood || !content.trim()) return;
+    if (!mood || !content.trim()) return;
+    if (!profile) {
+      // 资料/编号还没加载到位：补拉一次并提示，避免「点了没反应」
+      setErr('正在确认你的编号，请稍候一两秒再试。');
+      void refreshProfile();
+      return;
+    }
     setErr(null);
     setWarn(false);
     setSubmitting(true);
@@ -111,7 +130,7 @@ export default function Throw() {
           <div style={{ ...glassCard, padding: isNarrow ? '28px 22px' : '44px 48px' }}>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 13, color: 'rgba(255,255,255,0.78)', letterSpacing: 4, marginBottom: 8, textAlign: 'right', textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>a letter from</div>
             <div style={{ textAlign: 'right', fontSize: 12, color: 'rgba(255,255,255,0.82)', letterSpacing: 3, marginBottom: 28, borderBottom: '0.5px solid rgba(255,255,255,0.28)', paddingBottom: 14, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
-              No. <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', color: '#fff', margin: '0 4px' }}>{profile?.bottle_no ?? '----'}</em>　·　今晚
+              No. <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', color: '#fff', margin: '0 4px' }}>{profile?.bottle_no ?? '····'}</em>　·　{dateLabel}
             </div>
 
             <textarea
@@ -163,11 +182,12 @@ export default function Throw() {
                   textShadow: '0 1px 4px rgba(0,0,0,0.5)',
                   transition: 'color 0.2s ease',
                 }}>{content.length} / 300</div>
-                {(!content.trim() || !mood) && (
+                {(!content.trim() || !mood || !profile) && (
                   <div style={{ fontSize: 12, color: 'rgba(255,220,180,0.95)', letterSpacing: 1, textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
                     {!content.trim() && !mood ? '还差：写点内容 + 选个心情' :
                      !content.trim() ? '还差：写点内容' :
-                     '还差：选一个今天的状态'}
+                     !mood ? '还差：选一个今天的状态' :
+                     '正在确认你的编号，请稍候…'}
                   </div>
                 )}
               </div>
